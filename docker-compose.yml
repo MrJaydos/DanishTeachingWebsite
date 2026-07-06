@@ -1,0 +1,50 @@
+# Local development stack: the app + a Postgres database.
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+# Then open http://localhost:8080
+#
+# NOTE: This compose file is for LOCAL dev. On Coolify you deploy the Dockerfile
+# directly and use Coolify's own managed Postgres (see README).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-danish}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-danish}
+      POSTGRES_DB: ${POSTGRES_DB:-danish}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-danish}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: ${PORT:-8080}
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-danish}:${POSTGRES_PASSWORD:-danish}@db:5432/${POSTGRES_DB:-danish}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${PORT:-8080}/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  pgdata:

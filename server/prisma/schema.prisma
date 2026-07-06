@@ -1,0 +1,89 @@
+// Prisma schema for the Danish learning app.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  progress UserCardProgress[]
+  cards    Card[]             @relation("UserCards")
+  decks    Deck[]             @relation("UserDecks")
+  activity DailyActivity[]
+
+  @@map("users")
+}
+
+model Deck {
+  id          String   @id @default(uuid())
+  name        String
+  category    String // "vocab" | "grammar" | "listening"
+  description String?
+  ownerId     String?  @map("owner_id") // null = built-in/system deck, otherwise a user's custom deck
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  owner User?  @relation("UserDecks", fields: [ownerId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@map("decks")
+}
+
+model Card {
+  id              String   @id @default(uuid())
+  deckId          String   @map("deck_id")
+  danishText      String   @map("danish_text")
+  englishText     String   @map("english_text")
+  exampleSentence String?  @map("example_sentence")
+  cardType        String   @map("card_type") // "vocab" | "grammar" | "listening"
+  ownerId         String?  @map("owner_id") // null = built-in/system card, otherwise a user's custom card
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  deck     Deck               @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  owner    User?              @relation("UserCards", fields: [ownerId], references: [id], onDelete: Cascade)
+  progress UserCardProgress[]
+
+  @@index([deckId])
+  @@map("cards")
+}
+
+// SM-2 spaced-repetition state, tracked per-user per-card.
+model UserCardProgress {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  cardId         String    @map("card_id")
+  easeFactor     Float     @default(2.5) @map("ease_factor")
+  intervalDays   Int       @default(0) @map("interval_days")
+  repetitions    Int       @default(0)
+  dueDate        DateTime  @default(now()) @map("due_date")
+  lastReviewedAt DateTime? @map("last_reviewed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId])
+  @@index([userId, dueDate])
+  @@map("user_card_progress")
+}
+
+// One row per user per day they studied — used to compute streaks.
+model DailyActivity {
+  id      String   @id @default(uuid())
+  userId  String   @map("user_id")
+  date    DateTime @db.Date
+  reviews Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("daily_activity")
+}

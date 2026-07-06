@@ -1,0 +1,26 @@
+# Dependencies (installed fresh inside the image)
+node_modules
+*/node_modules
+
+# Build artifacts
+client/dist
+dist
+
+# Env & secrets
+.env
+.env.local
+*/.env
+
+# Git & CI
+.git
+.github
+.gitignore
+
+# Docs / editor
+*.md
+.vscode
+.idea
+.DS_Store
+
+# Local compose data
+pgdata
