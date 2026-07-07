@@ -2,7 +2,10 @@
 // Docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev; the debian target matches the Docker runtime
+  // image (node:22-slim / Debian bookworm + OpenSSL 3) used in production.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
