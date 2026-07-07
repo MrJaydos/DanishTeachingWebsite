@@ -16,6 +16,50 @@
     Helvetica, Arial, sans-serif;
 }
 
+:root[data-theme="dark"] {
+  --bg: #171614;
+  --surface: #211f1c;
+  --surface-2: #2b2823;
+  --border: #38342e;
+  --text: #ece8e1;
+  --text-muted: #a39c91;
+  --accent: #ef5d6b;
+  --accent-soft: #3a2529;
+  --blue: #7eb0de;
+  --green: #6cc38a;
+  --amber: #e0b062;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark-mode fixes for the few places that use literal (non-token) colours. */
+:root[data-theme="dark"] .topbar {
+  background: rgba(23, 22, 20, 0.85);
+}
+:root[data-theme="dark"] .btn.primary:hover {
+  background: #fff;
+}
+:root[data-theme="dark"] .feedback.correct {
+  background: rgba(108, 195, 138, 0.16);
+}
+:root[data-theme="dark"] .feedback.close {
+  background: rgba(224, 176, 98, 0.16);
+}
+:root[data-theme="dark"] .feedback.wrong {
+  background: var(--accent-soft);
+}
+:root[data-theme="dark"] .rate-btn.again:hover {
+  background: rgba(239, 93, 107, 0.14);
+}
+:root[data-theme="dark"] .rate-btn.hard:hover {
+  background: rgba(224, 176, 98, 0.14);
+}
+:root[data-theme="dark"] .rate-btn.good:hover {
+  background: rgba(126, 176, 222, 0.14);
+}
+:root[data-theme="dark"] .rate-btn.easy:hover {
+  background: rgba(108, 195, 138, 0.14);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -127,6 +171,18 @@ button {
 }
 .nav .signout:hover {
   color: var(--accent);
+}
+
+.icon-toggle {
+  border: none;
+  background: none;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.icon-toggle:hover {
+  background: var(--surface-2);
 }
 
 .container {
@@ -378,6 +434,18 @@ textarea.input {
   padding: 4px 12px;
   border-radius: 999px;
   font-weight: 600;
+}
+.flashcard.is-new {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--green), var(--shadow);
+}
+.intro-note {
+  background: rgba(74, 140, 95, 0.12);
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
 }
 .flashcard .danish {
   font-size: 2.3rem;

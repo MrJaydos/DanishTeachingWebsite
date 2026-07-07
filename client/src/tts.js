@@ -26,8 +26,19 @@ export function isTtsSupported() {
   return typeof window !== "undefined" && "speechSynthesis" in window;
 }
 
+// Global mute for quiet learning sessions. When muted, speakDanish is a no-op
+// and any in-flight speech is cancelled.
+let muted = false;
+export function setMuted(value) {
+  muted = !!value;
+  if (muted && isTtsSupported()) window.speechSynthesis.cancel();
+}
+export function isMuted() {
+  return muted;
+}
+
 export function speakDanish(text) {
-  if (!isTtsSupported() || !text) return;
+  if (muted || !isTtsSupported() || !text) return;
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = "da-DK";

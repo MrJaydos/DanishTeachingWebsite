@@ -24,7 +24,6 @@ export default function Study() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Per-card interaction state.
   const [typeMode, setTypeMode] = useState(
     () => localStorage.getItem(TYPE_MODE_KEY) === "1"
   );
@@ -33,6 +32,8 @@ export default function Study() {
   const [showHint, setShowHint] = useState(false);
   const inputRef = useRef(null);
 
+  const isNew = current?.status === "new";
+
   const loadSession = useCallback(async () => {
     setQueue(null);
     setError(null);
@@ -40,7 +41,6 @@ export default function Study() {
       const { cards } = await api.session({ limit: 30, new: 15 });
       setQueue(cards);
       setCurrent(cards[0] || null);
-      resetCardState();
       setDone(0);
     } catch (e) {
       setError(e.message);
@@ -48,23 +48,24 @@ export default function Study() {
     }
   }, []);
 
-  function resetCardState() {
-    setRevealed(false);
-    setTyped("");
-    setResult(null);
-    setShowHint(false);
-  }
-
   useEffect(() => {
     loadSession();
   }, [loadSession]);
 
-  // Speak the Danish and focus the input (if typing) when a new card appears.
+  // Initialise per-card state whenever the current card changes. New cards are
+  // shown already "revealed" — we introduce the word instead of asking the user
+  // to guess something they've never seen.
   useEffect(() => {
     if (!current) return;
-    speakDanish(current.danishText);
-    if (typeMode) setTimeout(() => inputRef.current?.focus(), 0);
-  }, [current, typeMode]);
+    const fresh = current.status === "new";
+    setRevealed(fresh);
+    setTyped("");
+    setResult(null);
+    setShowHint(false);
+    speakDanish(current.danishText); // no-op when muted
+    if (typeMode && !fresh) setTimeout(() => inputRef.current?.focus(), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
 
   function toggleTypeMode() {
     setTypeMode((v) => {
@@ -72,10 +73,6 @@ export default function Study() {
       localStorage.setItem(TYPE_MODE_KEY, next ? "1" : "0");
       return next;
     });
-  }
-
-  function reveal() {
-    setRevealed(true);
   }
 
   function checkTyped() {
@@ -96,12 +93,13 @@ export default function Study() {
     }
     setQueue((prev) => {
       const rest = prev.slice(1);
-      const next = rating === "again" ? [...rest, current] : rest;
+      // A re-queued card is no longer "new" — next time it's a recall test.
+      const next =
+        rating === "again" ? [...rest, { ...current, status: "review" }] : rest;
       setCurrent(next[0] || null);
       return next;
     });
     setDone((d) => d + 1);
-    resetCardState();
     setSubmitting(false);
   }
 
@@ -117,7 +115,7 @@ export default function Study() {
       }
       if (e.code === "Space" && !revealed) {
         e.preventDefault();
-        reveal();
+        setRevealed(true);
       } else if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
         rate(RATINGS[Number(e.key) - 1].key);
       } else if (e.key.toLowerCase() === "h" && !revealed) {
@@ -165,7 +163,7 @@ export default function Study() {
 
       <div className="spread" style={{ marginBottom: 16 }}>
         <span className="muted" style={{ fontSize: "0.85rem" }}>
-          {queue.length} left · {current.status === "new" ? "🆕 new" : "🔁 review"}
+          {queue.length} left · {isNew ? "🆕 new" : "🔁 review"}
         </span>
         <button
           className={`type-toggle ${typeMode ? "on" : ""}`}
@@ -176,14 +174,20 @@ export default function Study() {
         </button>
       </div>
 
-      <div className="card flashcard">
+      <div className={`card flashcard ${isNew ? "is-new" : ""}`}>
         <span className="pill">{current.deckName}</span>
+
+        {isNew && (
+          <div className="intro-note">
+            🆕 New word — here's what it means. No need to guess.
+          </div>
+        )}
+
         <div className="row">
           <span className="danish">{current.danishText}</span>
           <AudioButton text={current.danishText} />
         </div>
 
-        {/* Prompt tells the user exactly what to produce */}
         {!revealed && (
           <div className="prompt-note muted">What does this mean in English?</div>
         )}
@@ -231,7 +235,7 @@ export default function Study() {
               <button className="btn primary" onClick={checkTyped} disabled={!typed.trim()}>
                 Check <span className="muted">(enter)</span>
               </button>
-              <button className="btn" onClick={reveal}>
+              <button className="btn" onClick={() => setRevealed(true)}>
                 Skip
               </button>
             </div>
@@ -241,7 +245,7 @@ export default function Study() {
             <button className="btn" onClick={() => setShowHint(true)} disabled={showHint}>
               Hint <span className="muted">(h)</span>
             </button>
-            <button className="btn primary" onClick={reveal}>
+            <button className="btn primary" onClick={() => setRevealed(true)}>
               Show answer <span className="muted">(space)</span>
             </button>
           </div>
@@ -250,7 +254,9 @@ export default function Study() {
 
       {revealed && (
         <div className="rate-block">
-          <p className="rate-heading">How well did you know it?</p>
+          <p className="rate-heading">
+            {isNew ? "How familiar is this word already?" : "How well did you know it?"}
+          </p>
           <div className="rate-grid">
             {RATINGS.map((r, i) => (
               <button
@@ -266,7 +272,9 @@ export default function Study() {
             ))}
           </div>
           <p className="muted rate-help">
-            Rate yourself honestly — it sets when you'll see this card again.
+            {isNew
+              ? "Your rating sets when you'll first review this word."
+              : "Rate yourself honestly — it sets when you'll see this card again."}
           </p>
         </div>
       )}
