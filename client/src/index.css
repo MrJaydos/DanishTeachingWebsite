@@ -64,7 +64,11 @@ button {
 .topbar-inner {
   max-width: 960px;
   margin: 0 auto;
+  /* Respect the iPhone status bar / notch and side insets in standalone mode. */
   padding: 14px 20px;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  padding-left: calc(20px + env(safe-area-inset-left));
+  padding-right: calc(20px + env(safe-area-inset-right));
   display: flex;
   align-items: center;
   gap: 24px;
@@ -130,6 +134,9 @@ button {
   width: 100%;
   margin: 0 auto;
   padding: 32px 20px 64px;
+  padding-left: calc(20px + env(safe-area-inset-left));
+  padding-right: calc(20px + env(safe-area-inset-right));
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
   flex: 1;
 }
 
