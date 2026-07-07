@@ -447,6 +447,111 @@ textarea.input {
   background: #e9f3ec;
 }
 
+/* ------- Study: type mode, hints, feedback, rating ------- */
+.type-toggle {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+.type-toggle.on {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.prompt-note {
+  font-size: 0.9rem;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.hint-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--amber);
+}
+.hint-text {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  color: var(--text);
+}
+
+.type-area {
+  width: 100%;
+  max-width: 440px;
+  margin-top: 8px;
+}
+.type-area .input {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.feedback {
+  margin-top: 4px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.feedback.correct {
+  background: #e9f3ec;
+  color: var(--green);
+}
+.feedback.close {
+  background: #fbf1e2;
+  color: var(--amber);
+}
+.feedback.wrong {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.rate-block {
+  margin-top: 24px;
+}
+.rate-heading {
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+.rate-btn {
+  position: relative;
+}
+.rate-label {
+  font-size: 1rem;
+}
+.rate-key {
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.rate-btn.suggested {
+  box-shadow: 0 0 0 2px var(--text);
+}
+.rate-help {
+  text-align: center;
+  font-size: 0.8rem;
+  margin-top: 12px;
+}
+
 .center-msg {
   text-align: center;
   padding: 64px 20px;
