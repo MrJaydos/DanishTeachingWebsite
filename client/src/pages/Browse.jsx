@@ -9,6 +9,11 @@ export default function Browse() {
   const [error, setError] = useState(null);
   const [showDeckModal, setShowDeckModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
+  const [editingDeck, setEditingDeck] = useState(false);
+  const [editingCard, setEditingCard] = useState(null);
+
+  const [search, setSearch] = useState("");
+  const [allCards, setAllCards] = useState(null); // lazily loaded, for cross-deck search
 
   async function loadDecks() {
     try {
@@ -22,6 +27,22 @@ export default function Browse() {
   useEffect(() => {
     loadDecks();
   }, []);
+
+  // Fetch the full card list once the user starts searching; invalidated
+  // (see invalidateSearchCache) whenever a card/deck is created, edited, or
+  // deleted so results don't go stale.
+  useEffect(() => {
+    if (search.trim() && allCards === null) {
+      api
+        .cards()
+        .then(({ cards }) => setAllCards(cards))
+        .catch((e) => setError(e.message));
+    }
+  }, [search, allCards]);
+
+  function invalidateSearchCache() {
+    setAllCards(null);
+  }
 
   async function openDeck(deck) {
     setSelected(deck);
@@ -37,6 +58,7 @@ export default function Browse() {
   async function deleteDeck(deck) {
     if (!confirm(`Delete deck "${deck.name}" and all its cards?`)) return;
     await api.deleteDeck(deck.id);
+    invalidateSearchCache();
     setSelected(null);
     setCards(null);
     loadDecks();
@@ -45,6 +67,7 @@ export default function Browse() {
   async function deleteCard(card) {
     if (!confirm("Delete this card?")) return;
     await api.deleteCard(card.id);
+    invalidateSearchCache();
     setCards((prev) => prev.filter((c) => c.id !== card.id));
   }
 
@@ -64,6 +87,9 @@ export default function Browse() {
           <div className="row">
             {selected.isCustom && (
               <>
+                <button className="btn" onClick={() => setEditingDeck(true)}>
+                  Edit deck
+                </button>
                 <button className="btn" onClick={() => setShowCardModal(true)}>
                   + Add card
                 </button>
@@ -108,9 +134,18 @@ export default function Browse() {
                 </div>
                 {c.progress?.repetitions > 0 && <span className="badge">learned</span>}
                 {c.isCustom && (
-                  <button className="icon-btn" title="Delete card" onClick={() => deleteCard(c)}>
-                    ✕
-                  </button>
+                  <>
+                    <button
+                      className="icon-btn"
+                      title="Edit card"
+                      onClick={() => setEditingCard(c)}
+                    >
+                      ✎
+                    </button>
+                    <button className="icon-btn" title="Delete card" onClick={() => deleteCard(c)}>
+                      ✕
+                    </button>
+                  </>
                 )}
               </div>
             ))}
@@ -121,15 +156,55 @@ export default function Browse() {
           <CardModal
             deck={selected}
             onClose={() => setShowCardModal(false)}
-            onCreated={(card) => {
+            onSaved={(card) => {
               setCards((prev) => [...(prev || []), card]);
+              invalidateSearchCache();
               setShowCardModal(false);
+            }}
+          />
+        )}
+
+        {editingCard && (
+          <CardModal
+            deck={selected}
+            card={editingCard}
+            onClose={() => setEditingCard(null)}
+            onSaved={(card) => {
+              setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, ...card } : c)));
+              invalidateSearchCache();
+              setEditingCard(null);
+            }}
+          />
+        )}
+
+        {editingDeck && (
+          <DeckModal
+            deck={selected}
+            onClose={() => setEditingDeck(false)}
+            onSaved={(deck) => {
+              setSelected((prev) => ({ ...prev, ...deck }));
+              invalidateSearchCache();
+              setEditingDeck(false);
+              loadDecks();
             }}
           />
         )}
       </div>
     );
   }
+
+  // ----- Search results view -----
+  const searching = search.trim().length > 0;
+  const searchResults = searching
+    ? (allCards || []).filter((c) => {
+        const q = search.trim().toLowerCase();
+        return (
+          c.danishText.toLowerCase().includes(q) ||
+          c.englishText.toLowerCase().includes(q) ||
+          c.deckName.toLowerCase().includes(q)
+        );
+      })
+    : null;
 
   // ----- Deck grid view -----
   const customDecks = decks.filter((d) => d.isCustom);
@@ -147,18 +222,52 @@ export default function Browse() {
         </button>
       </div>
 
-      <DeckGrid decks={builtInDecks} title="Built-in decks" onOpen={openDeck} />
-      <DeckGrid
-        decks={customDecks}
-        title="Your decks"
-        onOpen={openDeck}
-        emptyHint="Create a deck to add your own cards."
+      <input
+        className="input search-box"
+        style={{ marginTop: 20 }}
+        placeholder="Search all cards (Danish, English, or deck name)…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
       />
+
+      {searching ? (
+        allCards === null ? (
+          <div className="spinner" />
+        ) : searchResults.length === 0 ? (
+          <p className="muted" style={{ marginTop: 20 }}>
+            No cards match “{search.trim()}”.
+          </p>
+        ) : (
+          <div className="card" style={{ marginTop: 20 }}>
+            {searchResults.map((c) => (
+              <div className="card-list-item" key={c.id}>
+                <AudioButton text={c.danishText} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="da">{c.danishText}</div>
+                  <div className="en">{c.englishText}</div>
+                  <div className="muted" style={{ fontSize: "0.78rem" }}>{c.deckName}</div>
+                </div>
+                {c.progress?.repetitions > 0 && <span className="badge">learned</span>}
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        <>
+          <DeckGrid decks={builtInDecks} title="Built-in decks" onOpen={openDeck} />
+          <DeckGrid
+            decks={customDecks}
+            title="Your decks"
+            onOpen={openDeck}
+            emptyHint="Create a deck to add your own cards."
+          />
+        </>
+      )}
 
       {showDeckModal && (
         <DeckModal
           onClose={() => setShowDeckModal(false)}
-          onCreated={() => {
+          onSaved={() => {
             setShowDeckModal(false);
             loadDecks();
           }}
@@ -197,10 +306,13 @@ function DeckGrid({ decks, title, onOpen, emptyHint }) {
   );
 }
 
-function DeckModal({ onClose, onCreated }) {
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("vocab");
-  const [description, setDescription] = useState("");
+// Used for both creating a new deck and editing an existing one — pass a
+// `deck` prop to edit it in place.
+function DeckModal({ deck, onClose, onSaved }) {
+  const isEdit = Boolean(deck);
+  const [name, setName] = useState(deck?.name || "");
+  const [category, setCategory] = useState(deck?.category || "vocab");
+  const [description, setDescription] = useState(deck?.description || "");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -209,8 +321,13 @@ function DeckModal({ onClose, onCreated }) {
     setBusy(true);
     setError(null);
     try {
-      await api.createDeck({ name, category, description });
-      onCreated();
+      if (isEdit) {
+        const { deck: updated } = await api.updateDeck(deck.id, { name, description });
+        onSaved(updated);
+      } else {
+        await api.createDeck({ name, category, description });
+        onSaved();
+      }
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -218,7 +335,7 @@ function DeckModal({ onClose, onCreated }) {
   }
 
   return (
-    <Modal onClose={onClose} title="New deck">
+    <Modal onClose={onClose} title={isEdit ? "Edit deck" : "New deck"}>
       {error && <div className="alert error">{error}</div>}
       <form onSubmit={submit}>
         <div className="field">
@@ -227,7 +344,13 @@ function DeckModal({ onClose, onCreated }) {
         </div>
         <div className="field">
           <label>Category</label>
-          <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select
+            className="input"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            disabled={isEdit}
+            title={isEdit ? "Category can't be changed after creation" : undefined}
+          >
             <option value="vocab">Vocab</option>
             <option value="grammar">Grammar</option>
             <option value="listening">Listening</option>
@@ -246,7 +369,7 @@ function DeckModal({ onClose, onCreated }) {
             Cancel
           </button>
           <button className="btn primary" disabled={busy}>
-            {busy ? "Creating…" : "Create deck"}
+            {busy ? "Saving…" : isEdit ? "Save changes" : "Create deck"}
           </button>
         </div>
       </form>
@@ -254,10 +377,13 @@ function DeckModal({ onClose, onCreated }) {
   );
 }
 
-function CardModal({ deck, onClose, onCreated }) {
-  const [danishText, setDanish] = useState("");
-  const [englishText, setEnglish] = useState("");
-  const [exampleSentence, setExample] = useState("");
+// Used for both creating a new card and editing an existing one — pass a
+// `card` prop to edit it in place.
+function CardModal({ deck, card, onClose, onSaved }) {
+  const isEdit = Boolean(card);
+  const [danishText, setDanish] = useState(card?.danishText || "");
+  const [englishText, setEnglish] = useState(card?.englishText || "");
+  const [exampleSentence, setExample] = useState(card?.exampleSentence || "");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -266,13 +392,22 @@ function CardModal({ deck, onClose, onCreated }) {
     setBusy(true);
     setError(null);
     try {
-      const { card } = await api.createCard({
-        deckId: deck.id,
-        danishText,
-        englishText,
-        exampleSentence,
-      });
-      onCreated({ ...card, isCustom: true, progress: null });
+      if (isEdit) {
+        const { card: updated } = await api.updateCard(card.id, {
+          danishText,
+          englishText,
+          exampleSentence,
+        });
+        onSaved(updated);
+      } else {
+        const { card: created } = await api.createCard({
+          deckId: deck.id,
+          danishText,
+          englishText,
+          exampleSentence,
+        });
+        onSaved({ ...created, isCustom: true, progress: null });
+      }
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -280,7 +415,7 @@ function CardModal({ deck, onClose, onCreated }) {
   }
 
   return (
-    <Modal onClose={onClose} title={`Add card to ${deck.name}`}>
+    <Modal onClose={onClose} title={isEdit ? "Edit card" : `Add card to ${deck.name}`}>
       {error && <div className="alert error">{error}</div>}
       <form onSubmit={submit}>
         <div className="field">
@@ -305,7 +440,7 @@ function CardModal({ deck, onClose, onCreated }) {
             Cancel
           </button>
           <button className="btn primary" disabled={busy}>
-            {busy ? "Adding…" : "Add card"}
+            {busy ? "Saving…" : isEdit ? "Save changes" : "Add card"}
           </button>
         </div>
       </form>

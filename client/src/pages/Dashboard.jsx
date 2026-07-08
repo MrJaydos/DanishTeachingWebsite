@@ -3,7 +3,23 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// Bucket a day's review count into a heatmap intensity level (GitHub-style).
+function heatLevel(reviews) {
+  if (reviews <= 0) return 0;
+  if (reviews <= 2) return 1;
+  if (reviews <= 5) return 2;
+  if (reviews <= 10) return 3;
+  return 4;
+}
+
+// Pad the front of the (oldest -> newest) activity list with nulls so the
+// first real day lines up under its correct weekday column (grid renders
+// column-major, Sunday-first, 7 rows tall).
+function buildHeatmapCells(recent) {
+  if (!recent.length) return [];
+  const firstWeekday = new Date(`${recent[0].date}T00:00:00Z`).getUTCDay();
+  return [...Array.from({ length: firstWeekday }, () => null), ...recent];
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -20,8 +36,9 @@ export default function Dashboard() {
   if (error) return <div className="alert error">{error}</div>;
   if (!stats) return <div className="spinner" />;
 
-  const maxReviews = Math.max(1, ...stats.recent.map((r) => r.reviews));
   const nothingToDo = stats.dueToday === 0 && stats.newAvailable === 0;
+  const heatmapCells = buildHeatmapCells(stats.recent);
+  const totalInPeriod = stats.recent.reduce((sum, r) => sum + r.reviews, 0);
 
   return (
     <div>
@@ -74,21 +91,29 @@ export default function Dashboard() {
       </div>
 
       <div className="card" style={{ padding: 24 }}>
-        <p className="section-title">Last 7 days</p>
-        <div className="activity">
-          {stats.recent.map((r) => (
-            <div
-              key={r.date}
-              className={`bar ${r.reviews > 0 ? "has" : ""}`}
-              style={{ height: `${(r.reviews / maxReviews) * 100}%` }}
-              title={`${r.reviews} reviews on ${r.date}`}
-            />
-          ))}
+        <div className="spread">
+          <p className="section-title">Activity — last {stats.recent.length} days</p>
+          <span className="muted" style={{ fontSize: "0.85rem" }}>
+            {totalInPeriod} review{totalInPeriod === 1 ? "" : "s"}
+          </span>
         </div>
-        <div className="activity-labels">
-          {stats.recent.map((r) => (
-            <span key={r.date}>{WEEKDAYS[new Date(r.date).getUTCDay()]}</span>
+        <div className="heatmap-scroll">
+          <div className="heatmap">
+            {heatmapCells.map((c, i) => (
+              <div
+                key={c ? c.date : `pad-${i}`}
+                className={`heatmap-cell${c ? ` level-${heatLevel(c.reviews)}` : " empty"}`}
+                title={c ? `${c.reviews} review${c.reviews === 1 ? "" : "s"} on ${c.date}` : ""}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="heatmap-legend">
+          <span className="muted">Less</span>
+          {[0, 1, 2, 3, 4].map((lvl) => (
+            <div key={lvl} className={`heatmap-cell level-${lvl}`} />
           ))}
+          <span className="muted">More</span>
         </div>
         <p className="muted" style={{ marginTop: 12, fontSize: "0.85rem" }}>
           {stats.reviewsToday} review{stats.reviewsToday === 1 ? "" : "s"} today ·{" "}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Login() {
@@ -69,6 +70,13 @@ export default function Login() {
             {isSignup && (
               <div className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>
                 At least 8 characters.
+              </div>
+            )}
+            {!isSignup && (
+              <div style={{ textAlign: "right", marginTop: 6 }}>
+                <Link to="/forgot-password" style={{ fontSize: "0.85rem" }}>
+                  Forgot password?
+                </Link>
               </div>
             )}
           </div>

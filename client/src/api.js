@@ -41,13 +41,21 @@ export const api = {
   signup: (email, password) => request("POST", "/auth/signup", { email, password }),
   login: (email, password) => request("POST", "/auth/login", { email, password }),
   me: () => request("GET", "/auth/me"),
+  forgotPassword: (email) => request("POST", "/auth/forgot-password", { email }),
+  resetPassword: (token, password) =>
+    request("POST", "/auth/reset-password", { token, password }),
+  changePassword: (currentPassword, newPassword) =>
+    request("POST", "/auth/change-password", { currentPassword, newPassword }),
+  deleteAccount: (password) => request("DELETE", "/auth/account", { password }),
 
   // Content
   decks: () => request("GET", "/decks"),
   createDeck: (d) => request("POST", "/decks", d),
+  updateDeck: (id, d) => request("PATCH", `/decks/${id}`, d),
   deleteDeck: (id) => request("DELETE", `/decks/${id}`),
   cards: (deckId) => request("GET", `/cards${deckId ? `?deckId=${deckId}` : ""}`),
   createCard: (c) => request("POST", "/cards", c),
+  updateCard: (id, c) => request("PATCH", `/cards/${id}`, c),
   deleteCard: (id) => request("DELETE", `/cards/${id}`),
 
   // Study
@@ -56,6 +64,8 @@ export const api = {
     return request("GET", `/study/session${q ? `?${q}` : ""}`);
   },
   review: (cardId, rating) => request("POST", "/study/review", { cardId, rating }),
+  undoReview: (cardId, previous) =>
+    request("POST", "/study/review/undo", { cardId, previous }),
 
   // Dashboard
   dashboard: () => request("GET", "/dashboard"),

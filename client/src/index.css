@@ -59,6 +59,10 @@
 :root[data-theme="dark"] .rate-btn.easy:hover {
   background: rgba(108, 195, 138, 0.14);
 }
+:root[data-theme="dark"] .btn.danger:hover {
+  background: #ff7b86;
+  color: #171614;
+}
 
 * {
   box-sizing: border-box;
@@ -255,6 +259,18 @@ h1 {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.btn.danger {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.btn.danger:hover {
+  background: #a10d25;
+}
+
+.danger-zone {
+  border-color: var(--accent-soft);
+}
 
 /* ------- Forms ------- */
 .field {
@@ -369,33 +385,53 @@ textarea.input {
   margin-top: 8px;
 }
 
-.activity {
-  display: flex;
-  gap: 6px;
-  align-items: flex-end;
-  height: 60px;
+.heatmap-scroll {
+  overflow-x: auto;
   margin-top: 16px;
+  padding-bottom: 4px;
 }
-.activity .bar {
-  flex: 1;
+.heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  grid-auto-flow: column;
+  grid-auto-columns: 14px;
+  gap: 3px;
+  width: max-content;
+}
+.heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
   background: var(--surface-2);
-  border-radius: 5px 5px 3px 3px;
-  min-height: 4px;
-  position: relative;
 }
-.activity .bar.has {
+.heatmap-cell.empty {
+  background: transparent;
+}
+.heatmap-cell.level-0 {
+  background: var(--surface-2);
+}
+.heatmap-cell.level-1 {
+  background: rgba(74, 140, 95, 0.35);
+}
+.heatmap-cell.level-2 {
+  background: rgba(74, 140, 95, 0.55);
+}
+.heatmap-cell.level-3 {
+  background: rgba(74, 140, 95, 0.75);
+}
+.heatmap-cell.level-4 {
   background: var(--green);
 }
-.activity-labels {
+.heatmap-legend {
   display: flex;
-  gap: 6px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 0.78rem;
 }
-.activity-labels span {
-  flex: 1;
-  text-align: center;
-  font-size: 0.7rem;
-  color: var(--text-muted);
+.heatmap-legend .heatmap-cell {
+  width: 12px;
+  height: 12px;
 }
 
 /* ------- Study ------- */
@@ -481,6 +517,55 @@ textarea.input {
 }
 .audio-btn:hover {
   background: var(--surface-2);
+}
+.audio-btn.large {
+  width: 76px;
+  height: 76px;
+  font-size: 2rem;
+}
+.listening-front {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.rule-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--accent-soft);
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-width: 420px;
+  text-align: left;
+}
+.rule-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--accent);
+}
+.rule-text {
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.undo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+}
+.undo-bar .btn {
+  padding: 6px 14px;
+  font-size: 0.85rem;
 }
 
 .rate-grid {

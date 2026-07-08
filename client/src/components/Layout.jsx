@@ -20,6 +20,7 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/study">Study</NavLink>
             <NavLink to="/browse">Browse</NavLink>
+            <NavLink to="/settings">Settings</NavLink>
             <button
               className="icon-toggle"
               onClick={toggleMuted}

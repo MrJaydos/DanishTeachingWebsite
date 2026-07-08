@@ -15,6 +15,7 @@ const RATINGS = [
 ];
 
 const TYPE_MODE_KEY = "danish_type_mode";
+const DIRECTION_KEY = "danish_direction"; // "da-en" | "en-da"
 
 export default function Study() {
   const [queue, setQueue] = useState(null);
@@ -23,9 +24,13 @@ export default function Study() {
   const [done, setDone] = useState(0);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [lastAction, setLastAction] = useState(null); // { card, previous, ratingLabel }
 
   const [typeMode, setTypeMode] = useState(
     () => localStorage.getItem(TYPE_MODE_KEY) === "1"
+  );
+  const [direction, setDirection] = useState(
+    () => localStorage.getItem(DIRECTION_KEY) || "da-en"
   );
   const [typed, setTyped] = useState("");
   const [result, setResult] = useState(null); // "correct" | "close" | "wrong" | null
@@ -33,10 +38,25 @@ export default function Study() {
   const inputRef = useRef(null);
 
   const isNew = current?.status === "new";
+  const isListening = current?.cardType === "listening";
+  // Listening cards are always audio -> meaning; the direction toggle only
+  // applies to vocab/grammar cards.
+  const reversed = !isListening && direction === "en-da";
+
+  const frontText = current && !isListening ? (reversed ? current.englishText : current.danishText) : null;
+  const backText = current && !isListening ? (reversed ? current.danishText : current.englishText) : null;
+  // What the typed/recalled answer is graded against.
+  const targetText = current ? (isListening ? current.englishText : reversed ? current.danishText : current.englishText) : "";
+  const promptText = isListening
+    ? "Listen, then recall what it means."
+    : reversed
+    ? "How do you say this in Danish?"
+    : "What does this mean in English?";
 
   const loadSession = useCallback(async () => {
     setQueue(null);
     setError(null);
+    setLastAction(null);
     try {
       const { cards } = await api.session({ limit: 30, new: 15 });
       setQueue(cards);
@@ -62,7 +82,11 @@ export default function Study() {
     setTyped("");
     setResult(null);
     setShowHint(false);
-    speakDanish(current.danishText); // no-op when muted
+    const listening = current.cardType === "listening";
+    const rev = !listening && direction === "en-da";
+    // Don't auto-speak the Danish word when it IS the answer being tested
+    // (English -> Danish mode) — that would give it away before reveal.
+    if (listening || !rev) speakDanish(current.danishText);
     if (typeMode && !fresh) setTimeout(() => inputRef.current?.focus(), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
@@ -75,17 +99,31 @@ export default function Study() {
     });
   }
 
+  function toggleDirection() {
+    setDirection((v) => {
+      const next = v === "da-en" ? "en-da" : "da-en";
+      localStorage.setItem(DIRECTION_KEY, next);
+      return next;
+    });
+  }
+
   function checkTyped() {
     if (!typed.trim()) return;
-    setResult(gradeAnswer(typed, current.englishText));
+    setResult(gradeAnswer(typed, targetText));
     setRevealed(true);
   }
 
   async function rate(rating) {
     if (!current || submitting) return;
     setSubmitting(true);
+    const ratedCard = current;
     try {
-      await api.review(current.id, rating);
+      const { previous } = await api.review(ratedCard.id, rating);
+      setLastAction({
+        card: ratedCard,
+        previous,
+        ratingLabel: RATINGS.find((r) => r.key === rating)?.label || rating,
+      });
     } catch (e) {
       setError(e.message);
       setSubmitting(false);
@@ -95,11 +133,29 @@ export default function Study() {
       const rest = prev.slice(1);
       // A re-queued card is no longer "new" — next time it's a recall test.
       const next =
-        rating === "again" ? [...rest, { ...current, status: "review" }] : rest;
+        rating === "again" ? [...rest, { ...ratedCard, status: "review" }] : rest;
       setCurrent(next[0] || null);
       return next;
     });
     setDone((d) => d + 1);
+    setSubmitting(false);
+  }
+
+  async function undoLast() {
+    if (!lastAction || submitting) return;
+    const { card } = lastAction;
+    setSubmitting(true);
+    try {
+      await api.undoReview(card.id, lastAction.previous);
+    } catch (e) {
+      setError(e.message);
+      setSubmitting(false);
+      return;
+    }
+    setQueue((prev) => [card, ...prev.filter((c) => c.id !== card.id)]);
+    setCurrent(card);
+    setDone((d) => Math.max(0, d - 1));
+    setLastAction(null);
     setSubmitting(false);
   }
 
@@ -129,9 +185,21 @@ export default function Study() {
   if (queue === null) return <div className="spinner" />;
   if (error && !current) return <div className="alert error">{error}</div>;
 
+  const undoBar = lastAction && (
+    <div className="undo-bar">
+      <span>
+        Rated “{lastAction.card.danishText}” as {lastAction.ratingLabel}.
+      </span>
+      <button className="btn" onClick={undoLast} disabled={submitting}>
+        Undo
+      </button>
+    </div>
+  );
+
   if (!current) {
     return (
       <div className="study-wrap">
+        {undoBar}
         <div className="center-msg">
           <div className="big">🎉</div>
           <h1>Session complete!</h1>
@@ -161,17 +229,30 @@ export default function Study() {
         <div className="fill" style={{ width: `${pct}%` }} />
       </div>
 
+      {undoBar}
+
       <div className="spread" style={{ marginBottom: 16 }}>
         <span className="muted" style={{ fontSize: "0.85rem" }}>
           {queue.length} left · {isNew ? "🆕 new" : "🔁 review"}
         </span>
-        <button
-          className={`type-toggle ${typeMode ? "on" : ""}`}
-          onClick={toggleTypeMode}
-          title="Toggle typing your answer"
-        >
-          ✍️ Type answer {typeMode ? "on" : "off"}
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          {!isListening && (
+            <button
+              className="type-toggle"
+              onClick={toggleDirection}
+              title="Swap which language you recall"
+            >
+              {reversed ? "🇬🇧→🇩🇰" : "🇩🇰→🇬🇧"}
+            </button>
+          )}
+          <button
+            className={`type-toggle ${typeMode ? "on" : ""}`}
+            onClick={toggleTypeMode}
+            title="Toggle typing your answer"
+          >
+            ✍️ Type answer {typeMode ? "on" : "off"}
+          </button>
+        </div>
       </div>
 
       <div className={`card flashcard ${isNew ? "is-new" : ""}`}>
@@ -179,33 +260,57 @@ export default function Study() {
 
         {isNew && (
           <div className="intro-note">
-            🆕 New word — here's what it means. No need to guess.
+            {isListening
+              ? "🆕 New phrase — listen to it, here's what it means."
+              : "🆕 New word — here's what it means. No need to guess."}
           </div>
         )}
 
-        <div className="row">
-          <span className="danish">{current.danishText}</span>
-          <AudioButton text={current.danishText} />
-        </div>
-
-        {!revealed && (
-          <div className="prompt-note muted">What does this mean in English?</div>
+        {isListening ? (
+          <div className="listening-front">
+            <AudioButton text={current.danishText} large />
+            {!revealed && <div className="prompt-note muted">{promptText}</div>}
+          </div>
+        ) : (
+          <>
+            <div className="row">
+              <span className="danish">{frontText}</span>
+              {!reversed && <AudioButton text={current.danishText} />}
+            </div>
+            {!revealed && <div className="prompt-note muted">{promptText}</div>}
+          </>
         )}
 
         {showHint && !revealed && (
           <div className="hint">
             <span className="hint-label">Hint</span>
-            <span className="hint-text">{makeHint(current.englishText)}</span>
+            <span className="hint-text">{makeHint(targetText)}</span>
           </div>
         )}
 
         {revealed ? (
           <>
             <div className="divider" />
-            <div className="english">{current.englishText}</div>
-            {current.exampleSentence && (
-              <div className="example">{current.exampleSentence}</div>
+            {isListening ? (
+              <>
+                <div className="danish" style={{ fontSize: "1.3rem" }}>{current.danishText}</div>
+                <div className="english">{current.englishText}</div>
+              </>
+            ) : (
+              <div className="row">
+                <span className={reversed ? "danish" : "english"}>{backText}</span>
+                {reversed && <AudioButton text={current.danishText} />}
+              </div>
             )}
+            {current.exampleSentence &&
+              (current.cardType === "grammar" ? (
+                <div className="rule-callout">
+                  <span className="rule-label">📐 Rule</span>
+                  <span className="rule-text">{current.exampleSentence}</span>
+                </div>
+              ) : (
+                <div className="example">{current.exampleSentence}</div>
+              ))}
             {result && (
               <div className={`feedback ${result}`}>
                 {result === "correct" && <>✓ Correct — you typed “{typed}”</>}
@@ -221,7 +326,13 @@ export default function Study() {
             <input
               ref={inputRef}
               className="input"
-              placeholder="Type the English meaning…"
+              placeholder={
+                isListening
+                  ? "Type what it means…"
+                  : reversed
+                  ? "Skriv det danske ord…"
+                  : "Type the English meaning…"
+              }
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
