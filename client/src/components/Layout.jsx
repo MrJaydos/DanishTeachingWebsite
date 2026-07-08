@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSettings } from "../context/SettingsContext.jsx";
@@ -5,6 +6,11 @@ import { useSettings } from "../context/SettingsContext.jsx";
 export default function Layout() {
   const { logout } = useAuth();
   const { theme, muted, toggleTheme, toggleMuted } = useSettings();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
 
   return (
     <div className="app-shell">
@@ -14,30 +20,54 @@ export default function Layout() {
             <span className="dot" />
             Dansk
           </span>
-          <nav className="nav">
-            <NavLink to="/" end>
+
+          <button
+            className="menu-toggle"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+
+          <nav className={`nav ${menuOpen ? "open" : ""}`}>
+            <NavLink to="/" end onClick={closeMenu}>
               Dashboard
             </NavLink>
-            <NavLink to="/study">Study</NavLink>
-            <NavLink to="/browse">Browse</NavLink>
-            <NavLink to="/settings">Settings</NavLink>
+            <NavLink to="/study" onClick={closeMenu}>
+              Study
+            </NavLink>
+            <NavLink to="/browse" onClick={closeMenu}>
+              Browse
+            </NavLink>
+            <NavLink to="/settings" onClick={closeMenu}>
+              Settings
+            </NavLink>
+            <div className="nav-toggles">
+              <button
+                className="icon-toggle"
+                onClick={toggleMuted}
+                title={muted ? "Unmute audio" : "Mute audio (quiet mode)"}
+                aria-label={muted ? "Unmute audio" : "Mute audio"}
+              >
+                {muted ? "🔇" : "🔊"}
+              </button>
+              <button
+                className="icon-toggle"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label="Toggle dark mode"
+              >
+                {theme === "dark" ? "☀️" : "🌙"}
+              </button>
+            </div>
             <button
-              className="icon-toggle"
-              onClick={toggleMuted}
-              title={muted ? "Unmute audio" : "Mute audio (quiet mode)"}
-              aria-label={muted ? "Unmute audio" : "Mute audio"}
+              className="signout"
+              onClick={() => {
+                closeMenu();
+                logout();
+              }}
             >
-              {muted ? "🔇" : "🔊"}
-            </button>
-            <button
-              className="icon-toggle"
-              onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              aria-label="Toggle dark mode"
-            >
-              {theme === "dark" ? "☀️" : "🌙"}
-            </button>
-            <button className="signout" onClick={logout}>
               Sign out
             </button>
           </nav>

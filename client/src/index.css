@@ -110,6 +110,7 @@ button {
 }
 
 .topbar-inner {
+  position: relative;
   max-width: 960px;
   margin: 0 auto;
   /* Respect the iPhone status bar / notch and side insets in standalone mode. */
@@ -120,6 +121,21 @@ button {
   display: flex;
   align-items: center;
   gap: 24px;
+}
+
+.menu-toggle {
+  display: none;
+  border: none;
+  background: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 6px 8px;
+  margin-left: auto;
+  color: var(--text);
+  border-radius: 8px;
+}
+.menu-toggle:hover {
+  background: var(--surface-2);
 }
 
 .brand {
@@ -187,6 +203,12 @@ button {
 }
 .icon-toggle:hover {
   background: var(--surface-2);
+}
+
+.nav-toggles {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .container {
@@ -881,5 +903,45 @@ textarea.input {
   }
   h1 {
     font-size: 1.6rem;
+  }
+
+  /* Collapse the top nav into a hamburger-triggered dropdown. */
+  .menu-toggle {
+    display: inline-flex;
+  }
+  .nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    margin-left: 0;
+    gap: 2px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+  .nav.open {
+    display: flex;
+  }
+  .nav a {
+    width: 100%;
+    padding: 12px 14px;
+  }
+  .nav-toggles {
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0 4px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 4px 0;
+  }
+  .nav .signout {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
   }
 }
