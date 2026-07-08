@@ -99,6 +99,19 @@ studyRouter.post("/review", async (req, res) => {
     where: { userId_cardId: { userId, cardId } },
   });
 
+  // Snapshot of the state before this review, so the client can offer an
+  // "undo" that restores it exactly (null means the card had no progress row
+  // yet — undo should delete the row this review creates).
+  const previous = existing
+    ? {
+        easeFactor: existing.easeFactor,
+        intervalDays: existing.intervalDays,
+        repetitions: existing.repetitions,
+        dueDate: existing.dueDate,
+        lastReviewedAt: existing.lastReviewedAt,
+      }
+    : null;
+
   const state = existing
     ? {
         easeFactor: existing.easeFactor,
@@ -146,5 +159,54 @@ studyRouter.post("/review", async (req, res) => {
       easeFactor: progress.easeFactor,
       dueDate: progress.dueDate,
     },
+    previous,
   });
+});
+
+// Undo the most recent review of a card, restoring its prior SM-2 state (or
+// removing the progress row entirely if the card had none before) and
+// decrementing today's activity count. `previous` is exactly what the
+// preceding /review response returned in its `previous` field.
+studyRouter.post("/review/undo", async (req, res) => {
+  const userId = req.user.id;
+  const cardId = String(req.body.cardId || "");
+  const previous = req.body.previous || null;
+
+  const card = await prisma.card.findFirst({
+    where: { id: cardId, ...cardVisibility(userId) },
+  });
+  if (!card) return res.status(404).json({ error: "Card not found." });
+
+  if (previous === null) {
+    await prisma.userCardProgress.deleteMany({ where: { userId, cardId } });
+  } else {
+    await prisma.userCardProgress.updateMany({
+      where: { userId, cardId },
+      data: {
+        easeFactor: previous.easeFactor,
+        intervalDays: previous.intervalDays,
+        repetitions: previous.repetitions,
+        dueDate: new Date(previous.dueDate),
+        lastReviewedAt: previous.lastReviewedAt ? new Date(previous.lastReviewedAt) : null,
+      },
+    });
+  }
+
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const activity = await prisma.dailyActivity.findUnique({
+    where: { userId_date: { userId, date: today } },
+  });
+  if (activity) {
+    if (activity.reviews <= 1) {
+      await prisma.dailyActivity.delete({ where: { id: activity.id } });
+    } else {
+      await prisma.dailyActivity.update({
+        where: { id: activity.id },
+        data: { reviews: { decrement: 1 } },
+      });
+    }
+  }
+
+  res.json({ ok: true });
 });

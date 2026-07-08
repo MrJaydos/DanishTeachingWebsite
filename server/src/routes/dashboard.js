@@ -9,6 +9,10 @@ function toUtcDate(d) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
+// Window for the heatmap (26 weeks, GitHub-style) — also generous enough that
+// the streak calculation below never runs out of history for realistic streaks.
+const HEATMAP_DAYS = 182;
+
 // Count consecutive days (ending today or yesterday) that have activity.
 function computeStreak(activityDates) {
   const set = new Set(
@@ -46,26 +50,26 @@ dashboardRouter.get("/", async (req, res) => {
     prisma.dailyActivity.findMany({
       where: { userId },
       orderBy: { date: "desc" },
-      take: 60,
+      take: HEATMAP_DAYS,
     }),
   ]);
 
+  const activityByDate = new Map(
+    activity.map((a) => [toUtcDate(new Date(a.date)).toISOString().slice(0, 10), a.reviews])
+  );
+
   const newAvailable = totalCards - inReview;
   const today = toUtcDate(now).toISOString().slice(0, 10);
-  const reviewsToday =
-    activity.find((a) => toUtcDate(new Date(a.date)).toISOString().slice(0, 10) === today)
-      ?.reviews || 0;
+  const reviewsToday = activityByDate.get(today) || 0;
 
-  // Last 7 days of review counts, oldest -> newest, for a mini activity chart.
+  // Last HEATMAP_DAYS days of review counts, oldest -> newest, for the
+  // activity heatmap.
   const recent = [];
-  for (let i = 6; i >= 0; i--) {
+  for (let i = HEATMAP_DAYS - 1; i >= 0; i--) {
     const d = toUtcDate(now);
     d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().slice(0, 10);
-    const row = activity.find(
-      (a) => toUtcDate(new Date(a.date)).toISOString().slice(0, 10) === key
-    );
-    recent.push({ date: key, reviews: row?.reviews || 0 });
+    recent.push({ date: key, reviews: activityByDate.get(key) || 0 });
   }
 
   res.json({

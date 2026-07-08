@@ -87,6 +87,31 @@ cardsRouter.post("/", async (req, res) => {
   res.status(201).json({ card });
 });
 
+// Edit a custom card owned by the current user.
+cardsRouter.patch("/:id", async (req, res) => {
+  const card = await prisma.card.findUnique({ where: { id: req.params.id } });
+  if (!card || card.ownerId !== req.user.id) {
+    return res.status(404).json({ error: "Card not found." });
+  }
+
+  const danishText = String(req.body.danishText ?? card.danishText).trim();
+  const englishText = String(req.body.englishText ?? card.englishText).trim();
+  const exampleSentence =
+    req.body.exampleSentence !== undefined
+      ? String(req.body.exampleSentence).trim() || null
+      : card.exampleSentence;
+
+  if (!danishText || !englishText) {
+    return res.status(400).json({ error: "Danish and English text are required." });
+  }
+
+  const updated = await prisma.card.update({
+    where: { id: card.id },
+    data: { danishText, englishText, exampleSentence },
+  });
+  res.json({ card: updated });
+});
+
 // Delete a custom card owned by the current user.
 cardsRouter.delete("/:id", async (req, res) => {
   const card = await prisma.card.findUnique({ where: { id: req.params.id } });

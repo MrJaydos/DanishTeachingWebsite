@@ -58,6 +58,30 @@ decksRouter.post("/", async (req, res) => {
   res.status(201).json({ deck });
 });
 
+// Edit a custom deck's name/description owned by the current user. Category
+// is immutable — it drives cardType for cards created in this deck, so
+// changing it after the fact would leave existing cards inconsistent.
+decksRouter.patch("/:id", async (req, res) => {
+  const deck = await prisma.deck.findUnique({ where: { id: req.params.id } });
+  if (!deck || deck.ownerId !== req.user.id) {
+    return res.status(404).json({ error: "Deck not found." });
+  }
+
+  const name = String(req.body.name ?? deck.name).trim();
+  const description =
+    req.body.description !== undefined
+      ? String(req.body.description).trim() || null
+      : deck.description;
+
+  if (!name) return res.status(400).json({ error: "Deck name is required." });
+
+  const updated = await prisma.deck.update({
+    where: { id: deck.id },
+    data: { name, description },
+  });
+  res.json({ deck: updated });
+});
+
 // Delete a custom deck (and its cards) owned by the current user.
 decksRouter.delete("/:id", async (req, res) => {
   const deck = await prisma.deck.findUnique({ where: { id: req.params.id } });

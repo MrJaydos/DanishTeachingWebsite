@@ -37,6 +37,12 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-danish}:${POSTGRES_PASSWORD:-danish}@db:5432/${POSTGRES_DB:-danish}?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-Dansk <no-reply@dansk.app>}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     healthcheck:
