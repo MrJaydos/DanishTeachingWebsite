@@ -11,6 +11,7 @@ import { decksRouter } from "./routes/decks.js";
 import { cardsRouter } from "./routes/cards.js";
 import { studyRouter } from "./routes/study.js";
 import { dashboardRouter } from "./routes/dashboard.js";
+import { achievementsRouter } from "./routes/achievements.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Built React app lives at <repo>/client/dist (see Dockerfile).
@@ -39,6 +40,7 @@ app.use("/api/decks", decksRouter);
 app.use("/api/cards", cardsRouter);
 app.use("/api/study", studyRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/achievements", achievementsRouter);
 
 app.use("/api", (_req, res) => res.status(404).json({ error: "Not found" }));
 

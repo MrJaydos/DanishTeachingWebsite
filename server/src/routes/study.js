@@ -2,6 +2,8 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { computeSm2, RATINGS } from "../utils/sm2.js";
+import { computeXpForReview, xpProgress } from "../utils/xp.js";
+import { checkAndAwardAchievements } from "../utils/achievements.js";
 
 export const studyRouter = Router();
 studyRouter.use(requireAuth);
@@ -151,6 +153,16 @@ studyRouter.post("/review", async (req, res) => {
     update: { reviews: { increment: 1 } },
   });
 
+  // Award XP (a card's very first review gets a bonus for learning something
+  // new), then check whether that pushed any achievement over its threshold.
+  const xpEarned = computeXpForReview(rating, previous === null);
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { xpTotal: { increment: xpEarned } },
+    select: { xpTotal: true },
+  });
+  const newAchievements = await checkAndAwardAchievements(userId);
+
   res.json({
     progress: {
       cardId,
@@ -160,6 +172,14 @@ studyRouter.post("/review", async (req, res) => {
       dueDate: progress.dueDate,
     },
     previous,
+    xpEarned,
+    ...xpProgress(updatedUser.xpTotal),
+    newAchievements: newAchievements.map((a) => ({
+      key: a.key,
+      icon: a.icon,
+      label: a.label,
+      description: a.description,
+    })),
   });
 });
 
@@ -171,6 +191,7 @@ studyRouter.post("/review/undo", async (req, res) => {
   const userId = req.user.id;
   const cardId = String(req.body.cardId || "");
   const previous = req.body.previous || null;
+  const xpEarned = Number(req.body.xpEarned) || 0;
 
   const card = await prisma.card.findFirst({
     where: { id: cardId, ...cardVisibility(userId) },
@@ -206,6 +227,17 @@ studyRouter.post("/review/undo", async (req, res) => {
         data: { reviews: { decrement: 1 } },
       });
     }
+  }
+
+  // Revert the XP this review awarded. Achievements are NOT un-earned —
+  // they're permanent milestones, and undo is meant to fix a misclick, not
+  // erase something the user genuinely did moments ago.
+  if (xpEarned > 0) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { xpTotal: true } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { xpTotal: Math.max(0, user.xpTotal - xpEarned) },
+    });
   }
 
   res.json({ ok: true });

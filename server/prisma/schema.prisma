@@ -17,6 +17,7 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String   @map("password_hash")
+  xpTotal      Int      @default(0) @map("xp_total")
   createdAt    DateTime @default(now()) @map("created_at")
 
   progress    UserCardProgress[]
@@ -24,8 +25,24 @@ model User {
   decks       Deck[]              @relation("UserDecks")
   activity    DailyActivity[]
   resetTokens PasswordResetToken[]
+  achievements EarnedAchievement[]
 
   @@map("users")
+}
+
+// A badge the user has unlocked (see server/src/utils/achievements.js for the
+// catalogue of keys). Rows are created once and never removed — achievements
+// are permanent even if the triggering review is later undone.
+model EarnedAchievement {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  key       String
+  earnedAt  DateTime @default(now()) @map("earned_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("earned_achievements")
 }
 
 // A password-reset link's token is hashed at rest (tokenHash) so a leaked DB
