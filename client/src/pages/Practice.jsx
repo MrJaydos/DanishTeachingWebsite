@@ -46,12 +46,23 @@ export default function Practice() {
     setError(null);
   }
 
-  // Starting a new scenario/level starts a fresh conversation — old context
-  // wouldn't match the new setting anyway.
+  // A new scenario starts a fresh conversation — old context wouldn't match
+  // the new setting anyway.
   useEffect(() => {
     resetConversation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario, level]);
+  }, [scenario]);
+
+  // Switching level, though, keeps the conversation going — the AI just
+  // adapts its Danish going forward. Drop in a small marker so it's clear the
+  // switch took effect. Skipped on mount (only real changes should note).
+  const prevLevelRef = useRef(level);
+  useEffect(() => {
+    if (prevLevelRef.current === level) return;
+    prevLevelRef.current = level;
+    const label = LEVELS.find((l) => l.key === level)?.label || level;
+    setMessages((prev) => [...prev, { role: "note", content: `Switched to ${label} level` }]);
+  }, [level]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,9 +88,13 @@ export default function Practice() {
     setSubmitting(true);
     setStreaming("");
 
+    // "note" entries (e.g. "Switched to Advanced level") are UI-only markers
+    // and aren't part of the actual conversation sent to the model.
+    const apiHistory = history.filter((m) => m.role !== "note");
+
     let full = "";
     await streamChatReply(
-      { scenario, level, messages: history },
+      { scenario, level, messages: apiHistory },
       {
         onText: (chunk) => {
           full += chunk;
@@ -148,6 +163,13 @@ export default function Practice() {
 
       <div className="chat-window">
         {messages.map((m, i) => {
+          if (m.role === "note") {
+            return (
+              <div key={i} className="chat-note">
+                {m.content}
+              </div>
+            );
+          }
           const { danish, tip } = m.role === "assistant" ? splitReply(m.content) : { danish: m.content, tip: null };
           return (
             <div key={i} className={`chat-bubble ${m.role}`}>
