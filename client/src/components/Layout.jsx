@@ -37,6 +37,9 @@ export default function Layout() {
             <NavLink to="/study" onClick={closeMenu}>
               Study
             </NavLink>
+            <NavLink to="/practice" onClick={closeMenu}>
+              💬 Practice
+            </NavLink>
             <NavLink to="/browse" onClick={closeMenu}>
               Browse
             </NavLink>

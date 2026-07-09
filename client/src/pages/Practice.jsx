@@ -1,0 +1,188 @@
+import { useEffect, useRef, useState } from "react";
+import { streamChatReply } from "../chat.js";
+import { speakDanish } from "../tts.js";
+import AudioButton from "../components/AudioButton.jsx";
+
+const SCENARIOS = [
+  { key: "small_talk", label: "Small talk", icon: "💬", opener: "Hej! Hvordan går det?" },
+  { key: "cafe_shopping", label: "Café & Shopping", icon: "☕", opener: "Hej, velkommen! Hvad kan jeg hjælpe med?" },
+  { key: "everyday_phrases", label: "Everyday Phrases", icon: "🗺️", opener: "Undskyld, kan du hjælpe mig lige et øjeblik?" },
+];
+
+const LEVELS = [
+  { key: "beginner", label: "Beginner" },
+  { key: "intermediate", label: "Intermediate" },
+  { key: "advanced", label: "Advanced" },
+];
+
+const SCENARIO_KEY = "danish_practice_scenario";
+const LEVEL_KEY = "danish_practice_level";
+
+// Split "danish text\nTip: english note" into its two parts. The Tip line is
+// only present when the model found something worth correcting.
+function splitReply(content) {
+  const match = content.match(/\n?Tip:\s*(.+)$/s);
+  if (!match) return { danish: content.trim(), tip: null };
+  return { danish: content.slice(0, match.index).trim(), tip: match[1].trim() };
+}
+
+export default function Practice() {
+  const [scenario, setScenario] = useState(() => localStorage.getItem(SCENARIO_KEY) || "small_talk");
+  const [level, setLevel] = useState(() => localStorage.getItem(LEVEL_KEY) || "beginner");
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(null); // in-progress assistant text, or null
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const bottomRef = useRef(null);
+
+  function opener() {
+    return SCENARIOS.find((s) => s.key === scenario)?.opener || SCENARIOS[0].opener;
+  }
+
+  function resetConversation() {
+    setMessages([{ role: "assistant", content: opener() }]);
+    setStreaming(null);
+    setError(null);
+  }
+
+  // Starting a new scenario/level starts a fresh conversation — old context
+  // wouldn't match the new setting anyway.
+  useEffect(() => {
+    resetConversation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, level]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streaming]);
+
+  function chooseScenario(key) {
+    setScenario(key);
+    localStorage.setItem(SCENARIO_KEY, key);
+  }
+
+  function chooseLevel(key) {
+    setLevel(key);
+    localStorage.setItem(LEVEL_KEY, key);
+  }
+
+  async function send() {
+    const text = input.trim();
+    if (!text || submitting) return;
+    setInput("");
+    setError(null);
+    const history = [...messages, { role: "user", content: text }];
+    setMessages(history);
+    setSubmitting(true);
+    setStreaming("");
+
+    let full = "";
+    await streamChatReply(
+      { scenario, level, messages: history },
+      {
+        onText: (chunk) => {
+          full += chunk;
+          setStreaming(full);
+        },
+        onDone: () => {
+          setMessages((prev) => [...prev, { role: "assistant", content: full }]);
+          setStreaming(null);
+          setSubmitting(false);
+          speakDanish(splitReply(full).danish);
+        },
+        onError: (msg) => {
+          setError(msg);
+          setStreaming(null);
+          setSubmitting(false);
+        },
+      }
+    );
+  }
+
+  function onKeyDown(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  }
+
+  return (
+    <div className="practice-wrap">
+      <div className="spread">
+        <div>
+          <p className="section-title">Conversation practice</p>
+          <h1>Practice</h1>
+        </div>
+        <button className="btn" onClick={resetConversation}>
+          New conversation
+        </button>
+      </div>
+
+      <div className="practice-controls">
+        <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+          {SCENARIOS.map((s) => (
+            <button
+              key={s.key}
+              className={`chip ${scenario === s.key ? "active" : ""}`}
+              onClick={() => chooseScenario(s.key)}
+            >
+              {s.icon} {s.label}
+            </button>
+          ))}
+        </div>
+        <div className="row" style={{ flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+          {LEVELS.map((l) => (
+            <button
+              key={l.key}
+              className={`chip level ${level === l.key ? "active" : ""}`}
+              onClick={() => chooseLevel(l.key)}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="chat-window">
+        {messages.map((m, i) => {
+          const { danish, tip } = m.role === "assistant" ? splitReply(m.content) : { danish: m.content, tip: null };
+          return (
+            <div key={i} className={`chat-bubble ${m.role}`}>
+              <div className="row" style={{ gap: 8 }}>
+                <span className="chat-text">{danish}</span>
+                {m.role === "assistant" && <AudioButton text={danish} />}
+              </div>
+              {tip && <div className="chat-tip">💡 {tip}</div>}
+            </div>
+          );
+        })}
+        {streaming !== null && (
+          <div className="chat-bubble assistant">
+            <span className="chat-text">
+              {splitReply(streaming).danish}
+              <span className="chat-cursor">▍</span>
+            </span>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      <div className="chat-input-row">
+        <input
+          className="input"
+          placeholder="Skriv på dansk…"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          disabled={submitting}
+        />
+        <button className="btn primary" onClick={send} disabled={submitting || !input.trim()}>
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}

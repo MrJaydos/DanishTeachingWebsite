@@ -28,6 +28,10 @@ export const config = {
     pass: process.env.SMTP_PASS || "",
     from: process.env.SMTP_FROM || "Dansk <no-reply@dansk.app>",
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  },
 };
 
 export const isProd = config.nodeEnv === "production";
