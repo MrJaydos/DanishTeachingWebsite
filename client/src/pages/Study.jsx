@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { speakDanish } from "../tts.js";
+import { playCorrect, playAgain, playAchievement, playLevelUp } from "../sfx.js";
+import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
 import { gradeAnswer, makeHint, suggestedRating } from "../answerCheck.js";
 
@@ -24,7 +26,14 @@ export default function Study() {
   const [done, setDone] = useState(0);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [lastAction, setLastAction] = useState(null); // { card, previous, ratingLabel }
+  const [lastAction, setLastAction] = useState(null); // { card, previous, xpEarned, xpStateBefore, ratingLabel }
+
+  const [combo, setCombo] = useState(0);
+  const [xpState, setXpState] = useState(null); // { xpTotal, level, xpIntoLevel, xpForNextLevel }
+  const [xpFloat, setXpFloat] = useState(null); // transient "+N XP" near the rate buttons
+  const [toasts, setToasts] = useState([]); // achievement/level-up banners
+  const toastIdRef = useRef(0);
+  const sessionCelebratedRef = useRef(false);
 
   const [typeMode, setTypeMode] = useState(
     () => localStorage.getItem(TYPE_MODE_KEY) === "1"
@@ -53,15 +62,33 @@ export default function Study() {
     ? "How do you say this in Danish?"
     : "What does this mean in English?";
 
+  function addToast(toast, ttl = 3200) {
+    const id = ++toastIdRef.current;
+    setToasts((t) => [...t, { id, ...toast }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ttl);
+  }
+
   const loadSession = useCallback(async () => {
     setQueue(null);
     setError(null);
     setLastAction(null);
+    setToasts([]);
+    setCombo(0);
+    sessionCelebratedRef.current = false;
     try {
-      const { cards } = await api.session({ limit: 30, new: 15 });
+      const [{ cards }, dash] = await Promise.all([
+        api.session({ limit: 30, new: 15 }),
+        api.dashboard(),
+      ]);
       setQueue(cards);
       setCurrent(cards[0] || null);
       setDone(0);
+      setXpState({
+        xpTotal: dash.xpTotal,
+        level: dash.level,
+        xpIntoLevel: dash.xpIntoLevel,
+        xpForNextLevel: dash.xpForNextLevel,
+      });
     } catch (e) {
       setError(e.message);
       setQueue([]);
@@ -71,6 +98,14 @@ export default function Study() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
+  // Celebrate reaching the end of a session, once.
+  useEffect(() => {
+    if (queue !== null && !current && done > 0 && !sessionCelebratedRef.current) {
+      sessionCelebratedRef.current = true;
+      fireConfetti({ count: 50 });
+    }
+  }, [queue, current, done]);
 
   // Initialise per-card state whenever the current card changes. New cards are
   // shown already "revealed" — we introduce the word instead of asking the user
@@ -117,18 +152,53 @@ export default function Study() {
     if (!current || submitting) return;
     setSubmitting(true);
     const ratedCard = current;
+    const xpStateBefore = xpState;
+    let res;
     try {
-      const { previous } = await api.review(ratedCard.id, rating);
-      setLastAction({
-        card: ratedCard,
-        previous,
-        ratingLabel: RATINGS.find((r) => r.key === rating)?.label || rating,
-      });
+      res = await api.review(ratedCard.id, rating);
     } catch (e) {
       setError(e.message);
       setSubmitting(false);
       return;
     }
+    const { previous, xpEarned, level, xpIntoLevel, xpForNextLevel, newAchievements } = res;
+
+    setLastAction({
+      card: ratedCard,
+      previous,
+      xpEarned,
+      xpStateBefore,
+      ratingLabel: RATINGS.find((r) => r.key === rating)?.label || rating,
+    });
+
+    if (rating === "again") {
+      setCombo(0);
+      playAgain();
+    } else {
+      setCombo((c) => c + 1);
+      playCorrect();
+    }
+
+    if (xpEarned > 0) {
+      setXpFloat(xpEarned);
+      setTimeout(() => setXpFloat(null), 1200);
+    }
+
+    if (xpStateBefore && level > xpStateBefore.level) {
+      addToast({ icon: "⭐", title: `Level ${level}!`, subtitle: "You leveled up." }, 4000);
+      fireConfetti({ count: 70 });
+      playLevelUp();
+    }
+    setXpState({ xpTotal: xpStateBefore ? xpStateBefore.xpTotal + xpEarned : xpEarned, level, xpIntoLevel, xpForNextLevel });
+
+    if (newAchievements?.length) {
+      newAchievements.forEach((a) =>
+        addToast({ icon: a.icon, title: `Achievement: ${a.label}`, subtitle: a.description }, 4000)
+      );
+      fireConfetti({ count: 60 });
+      playAchievement();
+    }
+
     setQueue((prev) => {
       const rest = prev.slice(1);
       // A re-queued card is no longer "new" — next time it's a recall test.
@@ -143,10 +213,10 @@ export default function Study() {
 
   async function undoLast() {
     if (!lastAction || submitting) return;
-    const { card } = lastAction;
+    const { card, previous, xpEarned, xpStateBefore } = lastAction;
     setSubmitting(true);
     try {
-      await api.undoReview(card.id, lastAction.previous);
+      await api.undoReview(card.id, previous, xpEarned);
     } catch (e) {
       setError(e.message);
       setSubmitting(false);
@@ -155,6 +225,8 @@ export default function Study() {
     setQueue((prev) => [card, ...prev.filter((c) => c.id !== card.id)]);
     setCurrent(card);
     setDone((d) => Math.max(0, d - 1));
+    setCombo((c) => Math.max(0, c - 1));
+    if (xpStateBefore) setXpState(xpStateBefore);
     setLastAction(null);
     setSubmitting(false);
   }
@@ -185,6 +257,20 @@ export default function Study() {
   if (queue === null) return <div className="spinner" />;
   if (error && !current) return <div className="alert error">{error}</div>;
 
+  const celebrationStack = toasts.length > 0 && (
+    <div className="celebration-stack">
+      {toasts.map((t) => (
+        <div className="celebration-toast" key={t.id}>
+          <span className="celebration-icon">{t.icon}</span>
+          <div>
+            <div className="celebration-title">{t.title}</div>
+            <div className="celebration-subtitle">{t.subtitle}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   const undoBar = lastAction && (
     <div className="undo-bar">
       <span>
@@ -199,6 +285,7 @@ export default function Study() {
   if (!current) {
     return (
       <div className="study-wrap">
+        {celebrationStack}
         {undoBar}
         <div className="center-msg">
           <div className="big">🎉</div>
@@ -225,6 +312,7 @@ export default function Study() {
 
   return (
     <div className="study-wrap">
+      {celebrationStack}
       <div className="study-progress">
         <div className="fill" style={{ width: `${pct}%` }} />
       </div>
@@ -234,6 +322,7 @@ export default function Study() {
       <div className="spread" style={{ marginBottom: 16 }}>
         <span className="muted" style={{ fontSize: "0.85rem" }}>
           {queue.length} left · {isNew ? "🆕 new" : "🔁 review"}
+          {combo >= 2 && <span className="combo-badge">🔥 {combo} in a row</span>}
         </span>
         <div className="row" style={{ gap: 8 }}>
           {!isListening && (
@@ -382,6 +471,7 @@ export default function Study() {
               </button>
             ))}
           </div>
+          {xpFloat && <div className="xp-float">+{xpFloat} XP</div>}
           <p className="muted rate-help">
             {isNew
               ? "Your rating sets when you'll first review this word."

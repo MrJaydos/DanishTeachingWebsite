@@ -7,6 +7,7 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Study from "./pages/Study.jsx";
 import Browse from "./pages/Browse.jsx";
+import Achievements from "./pages/Achievements.jsx";
 import Settings from "./pages/Settings.jsx";
 
 function Protected({ children }) {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/study" element={<Study />} />
         <Route path="/browse" element={<Browse />} />
+        <Route path="/achievements" element={<Achievements />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

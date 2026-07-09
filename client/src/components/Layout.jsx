@@ -40,6 +40,9 @@ export default function Layout() {
             <NavLink to="/browse" onClick={closeMenu}>
               Browse
             </NavLink>
+            <NavLink to="/achievements" onClick={closeMenu}>
+              🏆 Achievements
+            </NavLink>
             <NavLink to="/settings" onClick={closeMenu}>
               Settings
             </NavLink>

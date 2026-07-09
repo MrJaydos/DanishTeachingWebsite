@@ -64,9 +64,12 @@ export const api = {
     return request("GET", `/study/session${q ? `?${q}` : ""}`);
   },
   review: (cardId, rating) => request("POST", "/study/review", { cardId, rating }),
-  undoReview: (cardId, previous) =>
-    request("POST", "/study/review/undo", { cardId, previous }),
+  undoReview: (cardId, previous, xpEarned) =>
+    request("POST", "/study/review/undo", { cardId, previous, xpEarned }),
 
   // Dashboard
   dashboard: () => request("GET", "/dashboard"),
+
+  // Achievements
+  achievements: () => request("GET", "/achievements"),
 };

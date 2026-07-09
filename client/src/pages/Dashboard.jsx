@@ -50,6 +50,26 @@ export default function Dashboard() {
           : "Study today to start a streak."}
       </p>
 
+      <div className="card level-card" style={{ padding: 20, marginTop: 20 }}>
+        <div className="spread">
+          <div>
+            <span className="level-badge">Level {stats.level}</span>
+            <div className="muted" style={{ fontSize: "0.85rem", marginTop: 6 }}>
+              {stats.xpIntoLevel} / {stats.xpForNextLevel} XP to next level
+            </div>
+          </div>
+          <Link className="btn" to="/achievements">
+            🏆 Achievements
+          </Link>
+        </div>
+        <div className="xp-bar">
+          <div
+            className="xp-bar-fill"
+            style={{ width: `${(stats.xpIntoLevel / stats.xpForNextLevel) * 100}%` }}
+          />
+        </div>
+      </div>
+
       <div className="stat-grid">
         <div className="card stat">
           <div className="value">{stats.dueToday}</div>
