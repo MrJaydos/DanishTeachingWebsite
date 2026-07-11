@@ -5,13 +5,33 @@ import { playAchievement, playLevelUp } from "../sfx.js";
 import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
 import { api } from "../api.js";
-import { getStudyLanguage } from "../studyLanguage.js";
+import { useSettings } from "../context/SettingsContext.jsx";
 
+// Each scenario's opening line and the input placeholder, per target
+// language. Extend both alongside SUPPORTED_LANGUAGES in studyLanguage.js
+// when adding a new target language.
 const SCENARIOS = [
-  { key: "small_talk", label: "Small talk", icon: "💬", opener: "Hej! Hvordan går det?" },
-  { key: "cafe_shopping", label: "Café & Shopping", icon: "☕", opener: "Hej, velkommen! Hvad kan jeg hjælpe med?" },
-  { key: "everyday_phrases", label: "Everyday Phrases", icon: "🗺️", opener: "Undskyld, kan du hjælpe mig lige et øjeblik?" },
+  {
+    key: "small_talk",
+    label: "Small talk",
+    icon: "💬",
+    openers: { da: "Hej! Hvordan går det?", ja: "こんにちは!調子はどうですか?" },
+  },
+  {
+    key: "cafe_shopping",
+    label: "Café & Shopping",
+    icon: "☕",
+    openers: { da: "Hej, velkommen! Hvad kan jeg hjælpe med?", ja: "いらっしゃいませ!何になさいますか?" },
+  },
+  {
+    key: "everyday_phrases",
+    label: "Everyday Phrases",
+    icon: "🗺️",
+    openers: { da: "Undskyld, kan du hjælpe mig lige et øjeblik?", ja: "すみません、ちょっと聞いてもいいですか?" },
+  },
 ];
+
+const INPUT_PLACEHOLDERS = { da: "Skriv på dansk…", ja: "日本語で書いてください…" };
 
 const LEVELS = [
   { key: "beginner", label: "Beginner" },
@@ -22,15 +42,16 @@ const LEVELS = [
 const SCENARIO_KEY = "danish_practice_scenario";
 const LEVEL_KEY = "danish_practice_level";
 
-// Split "danish text\nTip: english note" into its two parts. The Tip line is
-// only present when the model found something worth correcting.
+// Split "target-language text\nTip: english note" into its two parts. The
+// Tip line is only present when the model found something worth correcting.
 function splitReply(content) {
   const match = content.match(/\n?Tip:\s*(.+)$/s);
-  if (!match) return { danish: content.trim(), tip: null };
-  return { danish: content.slice(0, match.index).trim(), tip: match[1].trim() };
+  if (!match) return { text: content.trim(), tip: null };
+  return { text: content.slice(0, match.index).trim(), tip: match[1].trim() };
 }
 
 export default function Practice() {
+  const { studyLanguage } = useSettings();
   const [scenario, setScenario] = useState(() => localStorage.getItem(SCENARIO_KEY) || "small_talk");
   const [level, setLevel] = useState(() => localStorage.getItem(LEVEL_KEY) || "beginner");
   const [messages, setMessages] = useState([]);
@@ -58,7 +79,8 @@ export default function Practice() {
   }
 
   function opener() {
-    return SCENARIOS.find((s) => s.key === scenario)?.opener || SCENARIOS[0].opener;
+    const s = SCENARIOS.find((s) => s.key === scenario) || SCENARIOS[0];
+    return s.openers[studyLanguage] || s.openers.da;
   }
 
   function resetConversation() {
@@ -67,12 +89,14 @@ export default function Practice() {
     setError(null);
   }
 
-  // A new scenario starts a fresh conversation — old context wouldn't match
-  // the new setting anyway.
+  // A new scenario — or switching which language is being studied — starts a
+  // fresh conversation; old context wouldn't match the new setting anyway,
+  // and a language switch especially shouldn't carry over a conversation
+  // that was happening in a different language.
   useEffect(() => {
     resetConversation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario]);
+  }, [scenario, studyLanguage]);
 
   // Switching level, though, keeps the conversation going — the AI just
   // adapts its Danish going forward. Drop in a small marker so it's clear the
@@ -114,7 +138,7 @@ export default function Practice() {
     const apiHistory = history.filter((m) => m.role !== "note");
     const xpStateBefore = xpState;
 
-    const language = getStudyLanguage();
+    const language = studyLanguage;
     let full = "";
     await streamChatReply(
       { scenario, level, language, messages: apiHistory },
@@ -127,7 +151,7 @@ export default function Practice() {
           setMessages((prev) => [...prev, { role: "assistant", content: full }]);
           setStreaming(null);
           setSubmitting(false);
-          speakText(splitReply(full).danish, language);
+          speakText(splitReply(full).text, language);
 
           const { xpEarned, level: newLevel, xpIntoLevel, xpForNextLevel, newAchievements } = payload;
           if (xpEarned > 0) {
@@ -228,12 +252,12 @@ export default function Practice() {
               </div>
             );
           }
-          const { danish, tip } = m.role === "assistant" ? splitReply(m.content) : { danish: m.content, tip: null };
+          const { text, tip } = m.role === "assistant" ? splitReply(m.content) : { text: m.content, tip: null };
           return (
             <div key={i} className={`chat-bubble ${m.role}`}>
               <div className="row" style={{ gap: 8 }}>
-                <span className="chat-text">{danish}</span>
-                {m.role === "assistant" && <AudioButton text={danish} langCode={getStudyLanguage()} />}
+                <span className="chat-text">{text}</span>
+                {m.role === "assistant" && <AudioButton text={text} langCode={studyLanguage} />}
               </div>
               {tip && <div className="chat-tip">💡 {tip}</div>}
             </div>
@@ -242,7 +266,7 @@ export default function Practice() {
         {streaming !== null && (
           <div className="chat-bubble assistant">
             <span className="chat-text">
-              {splitReply(streaming).danish}
+              {splitReply(streaming).text}
               <span className="chat-cursor">▍</span>
             </span>
           </div>
@@ -255,7 +279,7 @@ export default function Practice() {
       <div className="chat-input-row">
         <input
           className="input"
-          placeholder="Skriv på dansk…"
+          placeholder={INPUT_PLACEHOLDERS[studyLanguage] || INPUT_PLACEHOLDERS.da}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}

@@ -22,6 +22,7 @@ const LEVELS = {
 // adding a new target language.
 const LANGUAGES = {
   da: "Danish",
+  ja: "Japanese",
 };
 
 export function buildSystemPrompt(scenario, level, languageCode = "da") {

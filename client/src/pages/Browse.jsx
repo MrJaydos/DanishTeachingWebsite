@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import AudioButton from "../components/AudioButton.jsx";
-import { getStudyLanguage } from "../studyLanguage.js";
+import { useSettings } from "../context/SettingsContext.jsx";
 
 export default function Browse() {
+  const { studyLanguage } = useSettings();
   const [decks, setDecks] = useState(null);
   const [selected, setSelected] = useState(null); // deck object
   const [cards, setCards] = useState(null);
@@ -18,16 +19,21 @@ export default function Browse() {
 
   async function loadDecks() {
     try {
-      const { decks } = await api.decks({ language: getStudyLanguage() });
+      const { decks } = await api.decks({ language: studyLanguage });
       setDecks(decks);
     } catch (e) {
       setError(e.message);
     }
   }
 
+  // Re-fetch and back out of any open deck detail whenever the studied
+  // language changes, so Browse never shows a stale cross-language view.
   useEffect(() => {
+    setSelected(null);
+    setCards(null);
     loadDecks();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studyLanguage]);
 
   // Fetch the full card list once the user starts searching; invalidated
   // (see invalidateSearchCache) whenever a card/deck is created, edited, or
@@ -226,7 +232,7 @@ export default function Browse() {
       <input
         className="input search-box"
         style={{ marginTop: 20 }}
-        placeholder="Search all cards (Danish, English, or deck name)…"
+        placeholder="Search all cards (either language, or deck name)…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -267,6 +273,7 @@ export default function Browse() {
 
       {showDeckModal && (
         <DeckModal
+          language={studyLanguage}
           onClose={() => setShowDeckModal(false)}
           onSaved={() => {
             setShowDeckModal(false);
@@ -309,7 +316,7 @@ function DeckGrid({ decks, title, onOpen, emptyHint }) {
 
 // Used for both creating a new deck and editing an existing one — pass a
 // `deck` prop to edit it in place.
-function DeckModal({ deck, onClose, onSaved }) {
+function DeckModal({ deck, language, onClose, onSaved }) {
   const isEdit = Boolean(deck);
   const [name, setName] = useState(deck?.name || "");
   const [category, setCategory] = useState(deck?.category || "vocab");
@@ -326,7 +333,7 @@ function DeckModal({ deck, onClose, onSaved }) {
         const { deck: updated } = await api.updateDeck(deck.id, { name, description });
         onSaved(updated);
       } else {
-        await api.createDeck({ name, category, description });
+        await api.createDeck({ name, category, description, language });
         onSaved();
       }
     } catch (err) {

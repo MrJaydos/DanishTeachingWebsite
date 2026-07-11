@@ -2,10 +2,11 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSettings } from "../context/SettingsContext.jsx";
+import { SUPPORTED_LANGUAGES } from "../studyLanguage.js";
 
 export default function Layout() {
   const { logout } = useAuth();
-  const { theme, muted, toggleTheme, toggleMuted } = useSettings();
+  const { theme, muted, studyLanguage, toggleTheme, toggleMuted, setStudyLanguage } = useSettings();
   const [menuOpen, setMenuOpen] = useState(false);
 
   function closeMenu() {
@@ -50,6 +51,22 @@ export default function Layout() {
               Settings
             </NavLink>
             <div className="nav-toggles">
+              <select
+                className="lang-select"
+                value={studyLanguage}
+                onChange={(e) => {
+                  setStudyLanguage(e.target.value);
+                  closeMenu();
+                }}
+                title="Language you're studying"
+                aria-label="Language you're studying"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.flag} {l.label}
+                  </option>
+                ))}
+              </select>
               <button
                 className="icon-toggle"
                 onClick={toggleMuted}

@@ -7,6 +7,7 @@
 // expects. Extend this when adding a new target language.
 const LANG_TAGS = {
   da: "da-DK",
+  ja: "ja-JP",
 };
 
 const voiceCache = new Map();

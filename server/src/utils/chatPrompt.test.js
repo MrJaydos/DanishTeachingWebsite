@@ -33,6 +33,12 @@ describe("buildSystemPrompt", () => {
       buildSystemPrompt("small_talk", "beginner", "da")
     );
   });
+
+  test("supports Japanese", () => {
+    const prompt = buildSystemPrompt("small_talk", "beginner", "ja");
+    assert.match(prompt, /Reply ONLY in Japanese/);
+    assert.doesNotMatch(prompt, /Danish/);
+  });
 });
 
 describe("sanitizeMessages", () => {

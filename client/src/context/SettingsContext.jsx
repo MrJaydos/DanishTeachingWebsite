@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { setMuted as setTtsMuted } from "../tts.js";
+import { getStudyLanguage, persistStudyLanguage } from "../studyLanguage.js";
 
 const SettingsContext = createContext(null);
 
@@ -16,6 +17,7 @@ export function SettingsProvider({ children }) {
   const [muted, setMutedState] = useState(
     () => localStorage.getItem(MUTE_KEY) === "1"
   );
+  const [studyLanguage, setStudyLanguageState] = useState(getStudyLanguage);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -29,11 +31,17 @@ export function SettingsProvider({ children }) {
     localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
   }, [muted]);
 
+  useEffect(() => {
+    persistStudyLanguage(studyLanguage);
+  }, [studyLanguage]);
+
   const value = {
     theme,
     muted,
+    studyLanguage,
     toggleTheme: () => setTheme((t) => (t === "dark" ? "light" : "dark")),
     toggleMuted: () => setMutedState((m) => !m),
+    setStudyLanguage: setStudyLanguageState,
   };
 
   return (

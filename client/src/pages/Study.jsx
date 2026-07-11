@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { speakText } from "../tts.js";
-import { getStudyLanguage } from "../studyLanguage.js";
+import { useSettings } from "../context/SettingsContext.jsx";
 import { playCorrect, playAgain, playAchievement, playLevelUp } from "../sfx.js";
 import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
@@ -21,6 +21,7 @@ const TYPE_MODE_KEY = "danish_type_mode";
 const DIRECTION_KEY = "danish_direction"; // "da-en" | "en-da"
 
 export default function Study() {
+  const { studyLanguage } = useSettings();
   const [queue, setQueue] = useState(null);
   const [current, setCurrent] = useState(null);
   const [revealed, setRevealed] = useState(false);
@@ -78,7 +79,7 @@ export default function Study() {
     sessionCelebratedRef.current = false;
     try {
       const [{ cards }, dash] = await Promise.all([
-        api.session({ limit: 30, new: 15, language: getStudyLanguage() }),
+        api.session({ limit: 30, new: 15, language: studyLanguage }),
         api.dashboard(),
       ]);
       setQueue(cards);
@@ -94,7 +95,7 @@ export default function Study() {
       setError(e.message);
       setQueue([]);
     }
-  }, []);
+  }, [studyLanguage]);
 
   useEffect(() => {
     loadSession();
