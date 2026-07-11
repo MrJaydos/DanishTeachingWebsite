@@ -6,10 +6,17 @@ node_modules
 client/dist
 dist
 
+# Capacitor native projects (built manually via Xcode/Android Studio, not
+# part of the web Docker image)
+client/ios
+client/android
+client/assets
+
 # Env & secrets
 .env
 .env.local
 */.env
+client/.env.capacitor
 
 # Git & CI
 .git

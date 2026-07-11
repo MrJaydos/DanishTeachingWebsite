@@ -1,6 +1,14 @@
 // Thin fetch wrapper. The JWT is kept in localStorage and sent as a Bearer
-// token. All requests are same-origin (/api/...), proxied to the backend in
-// dev by Vite and served by the backend itself in production.
+// token. On the web (dev + the Coolify PWA deploy), requests are same-origin
+// (/api/...) — proxied to the backend in dev by Vite, served by the backend
+// itself in production. Inside the Capacitor native app, the built assets are
+// bundled locally with no same-origin backend to call, so requests there need
+// an absolute URL to wherever this app is actually deployed (baked in at
+// build time via VITE_API_BASE_URL — see client/.env.capacitor.example and
+// the "build:capacitor" script).
+import { Capacitor } from "@capacitor/core";
+
+export const API_BASE = Capacitor.isNativePlatform() ? import.meta.env.VITE_API_BASE_URL || "" : "";
 
 const TOKEN_KEY = "danish_token";
 
@@ -17,7 +25,7 @@ async function request(method, path, body) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}/api${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,

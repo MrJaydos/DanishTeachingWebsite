@@ -2,12 +2,12 @@
 // Server-Sent Events over a plain fetch (not EventSource, since EventSource
 // can't send a POST body or auth headers).
 
-import { getToken } from "./api.js";
+import { getToken, API_BASE } from "./api.js";
 
 export async function streamChatReply({ scenario, level, messages }, { onText, onDone, onError }) {
   let res;
   try {
-    res = await fetch("/api/chat/reply", {
+    res = await fetch(`${API_BASE}/api/chat/reply`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

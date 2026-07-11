@@ -21,9 +21,15 @@ const clientDist = path.resolve(__dirname, "../../client/dist");
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// In dev the Vite server runs on a different port and proxies /api, but CORS
-// keeps direct API calls working too.
-if (!isProd) app.use(cors());
+// The web/PWA build is served same-origin (no CORS needed there at all). This
+// is for two other cases: in dev, Vite runs on a different port so direct API
+// calls need CORS; in prod, the Capacitor native app bundles its assets
+// locally and calls out to this same backend from its own fixed default
+// origins (iOS uses the capacitor:// scheme, Android uses https://, both at
+// "localhost" — Capacitor's defaults when no server.hostname/scheme override
+// is set, which this app doesn't set).
+const NATIVE_APP_ORIGINS = ["capacitor://localhost", "https://localhost"];
+app.use(cors({ origin: isProd ? NATIVE_APP_ORIGINS : true }));
 
 // --- Health check (used by Docker / Coolify) --------------------------------
 app.get("/health", async (_req, res) => {

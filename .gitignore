@@ -10,6 +10,7 @@ dist/
 .env
 .env.local
 */.env
+client/.env.capacitor
 
 # Logs
 *.log
@@ -22,3 +23,15 @@ npm-debug.log*
 
 # Prisma
 prisma/*.db
+
+# Capacitor native projects — the project files themselves are tracked, but
+# not their regeneratable build caches/output
+client/ios/App/Pods/
+client/ios/App/build/
+client/ios/App/DerivedData/
+client/android/.gradle/
+client/android/build/
+client/android/app/build/
+client/android/local.properties
+client/android/*.iml
+client/android/.idea/
