@@ -32,12 +32,12 @@ export default function Login() {
       <div className="card auth-card">
         <div className="brand">
           <span className="dot" />
-          Dansk
+          JabberYap
         </div>
         <p className="auth-sub">
           {isSignup
             ? "Create an account to track your progress."
-            : "Welcome back — log in to keep learning Danish."}
+            : "Welcome back — log in to keep learning."}
         </p>
 
         {error && <div className="alert error">{error}</div>}

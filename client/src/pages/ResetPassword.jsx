@@ -34,7 +34,7 @@ export default function ResetPassword() {
       <div className="card auth-card">
         <div className="brand">
           <span className="dot" />
-          Dansk
+          JabberYap
         </div>
 
         {!token ? (

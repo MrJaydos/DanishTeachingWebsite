@@ -18,9 +18,11 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-A full-stack Danish spaced-repetition learning app (SM-2), deployed as a
-**single Docker container** on Coolify. The Express backend serves both the
-REST API and the built React frontend on one port.
+**JabberYap** — a full-stack spaced-repetition language-learning app (SM-2),
+deployed as a **single Docker container** on Coolify. The Express backend
+serves both the REST API and the built React frontend on one port. Currently
+teaches Danish, with multi-language support in progress (see the plan at
+the time of writing for the target/native text generalization).
 
 ## Architecture
 

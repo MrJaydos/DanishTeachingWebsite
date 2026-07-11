@@ -18,7 +18,7 @@ export default function Layout() {
         <div className="topbar-inner">
           <span className="brand">
             <span className="dot" />
-            Dansk
+            JabberYap
           </span>
 
           <button

@@ -1,7 +1,7 @@
 {
-  "name": "danish-learning-server",
+  "name": "jabberyap-server",
   "version": "1.0.0",
-  "description": "Backend API + static server for the Danish learning app",
+  "description": "Backend API + static server for the JabberYap language-learning app",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

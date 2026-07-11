@@ -42,7 +42,7 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-Dansk <no-reply@dansk.app>}
+      SMTP_FROM: ${SMTP_FROM:-JabberYap <no-reply@jabberyap.app>}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     ports:

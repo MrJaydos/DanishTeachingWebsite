@@ -1,7 +1,7 @@
 {
-  "name": "Dansk — Learn Danish",
-  "short_name": "Dansk",
-  "description": "Learn Danish with spaced repetition, hints, and typed recall.",
+  "name": "JabberYap — Language Learning",
+  "short_name": "JabberYap",
+  "description": "Learn languages with spaced repetition, hints, and typed recall.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

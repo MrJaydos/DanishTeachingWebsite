@@ -36,9 +36,9 @@ export async function sendPasswordResetEmail(email, resetUrl) {
   await getTransporter().sendMail({
     from: config.smtp.from,
     to: email,
-    subject: "Reset your Dansk password",
+    subject: "Reset your JabberYap password",
     text: `Reset your password: ${resetUrl}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
-    html: `<p>Someone requested a password reset for your Dansk account.</p>
+    html: `<p>Someone requested a password reset for your JabberYap account.</p>
 <p><a href="${resetUrl}">Click here to reset your password</a> (expires in 1 hour).</p>
 <p>If you didn't request this, you can ignore this email.</p>`,
   });

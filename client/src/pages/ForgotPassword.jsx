@@ -29,7 +29,7 @@ export default function ForgotPassword() {
       <div className="card auth-card">
         <div className="brand">
           <span className="dot" />
-          Dansk
+          JabberYap
         </div>
         <p className="auth-sub">
           Enter your email and we'll send you a link to reset your password.
