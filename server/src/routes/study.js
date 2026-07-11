@@ -11,9 +11,12 @@ studyRouter.use(requireAuth);
 const DEFAULT_NEW_PER_SESSION = 15;
 const DEFAULT_SESSION_LIMIT = 30;
 
-function cardVisibility(userId, deckId) {
+function cardVisibility(userId, deckId, language) {
   return {
-    deck: { OR: [{ ownerId: null }, { ownerId: userId }] },
+    deck: {
+      OR: [{ ownerId: null }, { ownerId: userId }],
+      ...(language ? { language } : {}),
+    },
     ...(deckId ? { deckId } : {}),
   };
 }
@@ -23,8 +26,9 @@ function serializeCard(c) {
     id: c.id,
     deckId: c.deckId,
     deckName: c.deck?.name,
-    danishText: c.danishText,
-    englishText: c.englishText,
+    language: c.deck?.language,
+    targetText: c.targetText,
+    nativeText: c.nativeText,
     exampleSentence: c.exampleSentence,
     cardType: c.cardType,
   };
@@ -35,6 +39,7 @@ function serializeCard(c) {
 studyRouter.get("/session", async (req, res) => {
   const userId = req.user.id;
   const deckId = req.query.deckId ? String(req.query.deckId) : undefined;
+  const language = req.query.language ? String(req.query.language) : undefined;
   const limit = Math.min(parseInt(req.query.limit, 10) || DEFAULT_SESSION_LIMIT, 100);
   const newLimit = Math.min(
     parseInt(req.query.new, 10) || DEFAULT_NEW_PER_SESSION,
@@ -47,11 +52,11 @@ studyRouter.get("/session", async (req, res) => {
     where: {
       userId,
       dueDate: { lte: now },
-      card: cardVisibility(userId, deckId),
+      card: cardVisibility(userId, deckId, language),
     },
     orderBy: { dueDate: "asc" },
     take: limit,
-    include: { card: { include: { deck: { select: { name: true } } } } },
+    include: { card: { include: { deck: { select: { name: true, language: true } } } } },
   });
 
   const dueCards = dueProgress.map((p) => ({
@@ -65,12 +70,12 @@ studyRouter.get("/session", async (req, res) => {
   if (remaining > 0 && newLimit > 0) {
     const fresh = await prisma.card.findMany({
       where: {
-        ...cardVisibility(userId, deckId),
+        ...cardVisibility(userId, deckId, language),
         progress: { none: { userId } },
       },
       orderBy: { createdAt: "asc" },
       take: Math.min(remaining, newLimit),
-      include: { deck: { select: { name: true } } },
+      include: { deck: { select: { name: true, language: true } } },
     });
     newCards = fresh.map((c) => ({ ...serializeCard(c), status: "new" }));
   }

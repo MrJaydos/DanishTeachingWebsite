@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import AudioButton from "../components/AudioButton.jsx";
+import { getStudyLanguage } from "../studyLanguage.js";
 
 export default function Browse() {
   const [decks, setDecks] = useState(null);
@@ -17,7 +18,7 @@ export default function Browse() {
 
   async function loadDecks() {
     try {
-      const { decks } = await api.decks();
+      const { decks } = await api.decks({ language: getStudyLanguage() });
       setDecks(decks);
     } catch (e) {
       setError(e.message);
@@ -122,10 +123,10 @@ export default function Browse() {
           <div className="card">
             {cards.map((c) => (
               <div className="card-list-item" key={c.id}>
-                <AudioButton text={c.danishText} />
+                <AudioButton text={c.targetText} langCode={c.language} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="da">{c.danishText}</div>
-                  <div className="en">{c.englishText}</div>
+                  <div className="da">{c.targetText}</div>
+                  <div className="en">{c.nativeText}</div>
                   {c.exampleSentence && (
                     <div className="muted" style={{ fontSize: "0.82rem", fontStyle: "italic" }}>
                       {c.exampleSentence}
@@ -199,8 +200,8 @@ export default function Browse() {
     ? (allCards || []).filter((c) => {
         const q = search.trim().toLowerCase();
         return (
-          c.danishText.toLowerCase().includes(q) ||
-          c.englishText.toLowerCase().includes(q) ||
+          c.targetText.toLowerCase().includes(q) ||
+          c.nativeText.toLowerCase().includes(q) ||
           c.deckName.toLowerCase().includes(q)
         );
       })
@@ -241,10 +242,10 @@ export default function Browse() {
           <div className="card" style={{ marginTop: 20 }}>
             {searchResults.map((c) => (
               <div className="card-list-item" key={c.id}>
-                <AudioButton text={c.danishText} />
+                <AudioButton text={c.targetText} langCode={c.language} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="da">{c.danishText}</div>
-                  <div className="en">{c.englishText}</div>
+                  <div className="da">{c.targetText}</div>
+                  <div className="en">{c.nativeText}</div>
                   <div className="muted" style={{ fontSize: "0.78rem" }}>{c.deckName}</div>
                 </div>
                 {c.progress?.repetitions > 0 && <span className="badge">learned</span>}
@@ -381,8 +382,8 @@ function DeckModal({ deck, onClose, onSaved }) {
 // `card` prop to edit it in place.
 function CardModal({ deck, card, onClose, onSaved }) {
   const isEdit = Boolean(card);
-  const [danishText, setDanish] = useState(card?.danishText || "");
-  const [englishText, setEnglish] = useState(card?.englishText || "");
+  const [targetText, setTarget] = useState(card?.targetText || "");
+  const [nativeText, setNative] = useState(card?.nativeText || "");
   const [exampleSentence, setExample] = useState(card?.exampleSentence || "");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -394,16 +395,16 @@ function CardModal({ deck, card, onClose, onSaved }) {
     try {
       if (isEdit) {
         const { card: updated } = await api.updateCard(card.id, {
-          danishText,
-          englishText,
+          targetText,
+          nativeText,
           exampleSentence,
         });
         onSaved(updated);
       } else {
         const { card: created } = await api.createCard({
           deckId: deck.id,
-          danishText,
-          englishText,
+          targetText,
+          nativeText,
           exampleSentence,
         });
         onSaved({ ...created, isCustom: true, progress: null });
@@ -420,11 +421,11 @@ function CardModal({ deck, card, onClose, onSaved }) {
       <form onSubmit={submit}>
         <div className="field">
           <label>Danish</label>
-          <input className="input" value={danishText} onChange={(e) => setDanish(e.target.value)} required />
+          <input className="input" value={targetText} onChange={(e) => setTarget(e.target.value)} required />
         </div>
         <div className="field">
           <label>English</label>
-          <input className="input" value={englishText} onChange={(e) => setEnglish(e.target.value)} required />
+          <input className="input" value={nativeText} onChange={(e) => setNative(e.target.value)} required />
         </div>
         <div className="field">
           <label>Example / note (optional)</label>

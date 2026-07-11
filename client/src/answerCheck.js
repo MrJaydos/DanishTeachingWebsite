@@ -15,8 +15,8 @@ function normalize(s) {
 }
 
 // Split "holiday / vacation", "road, way" etc. into accepted variants.
-function variantsOf(englishText) {
-  return String(englishText)
+function variantsOf(nativeText) {
+  return String(nativeText)
     .split(/[/;,]| or /i)
     .map(normalize)
     .filter(Boolean);
@@ -43,11 +43,11 @@ function levenshtein(a, b) {
  * Grade a typed answer.
  * @returns {"correct"|"close"|"wrong"|null} null if the input is empty.
  */
-export function gradeAnswer(input, englishText) {
+export function gradeAnswer(input, nativeText) {
   const typed = normalize(input);
   if (!typed) return null;
 
-  const variants = variantsOf(englishText);
+  const variants = variantsOf(nativeText);
   if (variants.includes(typed)) return "correct";
 
   // Allow a one-off typo relative to the closest variant (~20% of its length).
@@ -62,8 +62,8 @@ export function gradeAnswer(input, englishText) {
 
 // A progressive hint: first letter of each word, rest masked.
 // "bread" -> "b ▢▢▢▢", "get up" -> "g▢▢ u▢"
-export function makeHint(englishText) {
-  const primary = String(englishText).split(/[/;,]| or /i)[0].trim();
+export function makeHint(nativeText) {
+  const primary = String(nativeText).split(/[/;,]| or /i)[0].trim();
   return primary
     .split(/\s+/)
     .map((w) => w[0] + "▢".repeat(Math.max(0, w.length - 1)))

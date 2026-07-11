@@ -11,8 +11,12 @@ const CATEGORIES = ["vocab", "grammar", "listening"];
 // each with a card count and how many cards are currently due for this user.
 decksRouter.get("/", async (req, res) => {
   const userId = req.user.id;
+  const language = req.query.language ? String(req.query.language) : undefined;
   const decks = await prisma.deck.findMany({
-    where: { OR: [{ ownerId: null }, { ownerId: userId }] },
+    where: {
+      OR: [{ ownerId: null }, { ownerId: userId }],
+      ...(language ? { language } : {}),
+    },
     orderBy: [{ ownerId: "asc" }, { category: "asc" }, { name: "asc" }],
     include: { _count: { select: { cards: true } } },
   });
@@ -34,6 +38,7 @@ decksRouter.get("/", async (req, res) => {
       name: d.name,
       category: d.category,
       description: d.description,
+      language: d.language,
       isCustom: d.ownerId !== null,
       cardCount: d._count.cards,
       dueCount: dueByDeck[d.id] || 0,
@@ -46,6 +51,7 @@ decksRouter.post("/", async (req, res) => {
   const name = String(req.body.name || "").trim();
   const category = String(req.body.category || "vocab").trim();
   const description = req.body.description ? String(req.body.description).trim() : null;
+  const language = String(req.body.language || "da").trim();
 
   if (!name) return res.status(400).json({ error: "Deck name is required." });
   if (!CATEGORIES.includes(category)) {
@@ -53,7 +59,7 @@ decksRouter.post("/", async (req, res) => {
   }
 
   const deck = await prisma.deck.create({
-    data: { name, category, description, ownerId: req.user.id },
+    data: { name, category, description, language, ownerId: req.user.id },
   });
   res.status(201).json({ deck });
 });

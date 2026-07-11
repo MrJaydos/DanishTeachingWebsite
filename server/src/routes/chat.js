@@ -31,6 +31,7 @@ chatRouter.post("/reply", chatLimiter, async (req, res) => {
 
   const scenario = String(req.body.scenario || "small_talk");
   const level = String(req.body.level || "beginner");
+  const language = String(req.body.language || "da");
   const messages = sanitizeMessages(req.body.messages);
   if (!messages) {
     return res.status(400).json({ error: "messages must be a non-empty array ending with a user turn." });
@@ -49,7 +50,7 @@ chatRouter.post("/reply", chatLimiter, async (req, res) => {
       model: config.gemini.model,
       contents: toGeminiContents(messages),
       config: {
-        systemInstruction: buildSystemPrompt(scenario, level),
+        systemInstruction: buildSystemPrompt(scenario, level, language),
         maxOutputTokens: MAX_TOKENS,
       },
     });

@@ -57,7 +57,10 @@ export const api = {
   deleteAccount: (password) => request("DELETE", "/auth/account", { password }),
 
   // Content
-  decks: () => request("GET", "/decks"),
+  decks: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request("GET", `/decks${q ? `?${q}` : ""}`);
+  },
   createDeck: (d) => request("POST", "/decks", d),
   updateDeck: (id, d) => request("PATCH", `/decks/${id}`, d),
   deleteDeck: (id) => request("DELETE", `/decks/${id}`),

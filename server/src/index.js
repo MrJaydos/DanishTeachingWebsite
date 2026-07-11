@@ -77,7 +77,7 @@ app.use((err, _req, res, _next) => {
 });
 
 const server = app.listen(config.port, () => {
-  console.log(`Danish learning app listening on port ${config.port}`);
+  console.log(`JabberYap listening on port ${config.port}`);
 });
 
 // Graceful shutdown so Coolify/Docker can stop the container cleanly.

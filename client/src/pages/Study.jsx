@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { speakDanish } from "../tts.js";
+import { speakText } from "../tts.js";
+import { getStudyLanguage } from "../studyLanguage.js";
 import { playCorrect, playAgain, playAchievement, playLevelUp } from "../sfx.js";
 import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
@@ -52,10 +53,10 @@ export default function Study() {
   // applies to vocab/grammar cards.
   const reversed = !isListening && direction === "en-da";
 
-  const frontText = current && !isListening ? (reversed ? current.englishText : current.danishText) : null;
-  const backText = current && !isListening ? (reversed ? current.danishText : current.englishText) : null;
+  const frontText = current && !isListening ? (reversed ? current.nativeText : current.targetText) : null;
+  const backText = current && !isListening ? (reversed ? current.targetText : current.nativeText) : null;
   // What the typed/recalled answer is graded against.
-  const targetText = current ? (isListening ? current.englishText : reversed ? current.danishText : current.englishText) : "";
+  const targetText = current ? (isListening ? current.nativeText : reversed ? current.targetText : current.nativeText) : "";
   const promptText = isListening
     ? "Listen, then recall what it means."
     : reversed
@@ -77,7 +78,7 @@ export default function Study() {
     sessionCelebratedRef.current = false;
     try {
       const [{ cards }, dash] = await Promise.all([
-        api.session({ limit: 30, new: 15 }),
+        api.session({ limit: 30, new: 15, language: getStudyLanguage() }),
         api.dashboard(),
       ]);
       setQueue(cards);
@@ -121,7 +122,7 @@ export default function Study() {
     const rev = !listening && direction === "en-da";
     // Don't auto-speak the Danish word when it IS the answer being tested
     // (English -> Danish mode) — that would give it away before reveal.
-    if (listening || !rev) speakDanish(current.danishText);
+    if (listening || !rev) speakText(current.targetText, current.language);
     if (typeMode && !fresh) setTimeout(() => inputRef.current?.focus(), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current]);
@@ -274,7 +275,7 @@ export default function Study() {
   const undoBar = lastAction && (
     <div className="undo-bar">
       <span>
-        Rated “{lastAction.card.danishText}” as {lastAction.ratingLabel}.
+        Rated “{lastAction.card.targetText}” as {lastAction.ratingLabel}.
       </span>
       <button className="btn" onClick={undoLast} disabled={submitting}>
         Undo
@@ -357,14 +358,14 @@ export default function Study() {
 
         {isListening ? (
           <div className="listening-front">
-            <AudioButton text={current.danishText} large />
+            <AudioButton text={current.targetText} langCode={current.language} large />
             {!revealed && <div className="prompt-note muted">{promptText}</div>}
           </div>
         ) : (
           <>
             <div className="row">
               <span className="danish">{frontText}</span>
-              {!reversed && <AudioButton text={current.danishText} />}
+              {!reversed && <AudioButton text={current.targetText} langCode={current.language} />}
             </div>
             {!revealed && <div className="prompt-note muted">{promptText}</div>}
           </>
@@ -382,13 +383,13 @@ export default function Study() {
             <div className="divider" />
             {isListening ? (
               <>
-                <div className="danish" style={{ fontSize: "1.3rem" }}>{current.danishText}</div>
-                <div className="english">{current.englishText}</div>
+                <div className="danish" style={{ fontSize: "1.3rem" }}>{current.targetText}</div>
+                <div className="english">{current.nativeText}</div>
               </>
             ) : (
               <div className="row">
                 <span className={reversed ? "danish" : "english"}>{backText}</span>
-                {reversed && <AudioButton text={current.danishText} />}
+                {reversed && <AudioButton text={current.targetText} langCode={current.language} />}
               </div>
             )}
             {current.exampleSentence &&

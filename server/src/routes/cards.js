@@ -21,7 +21,7 @@ cardsRouter.get("/", async (req, res) => {
     where,
     orderBy: { createdAt: "asc" },
     include: {
-      deck: { select: { name: true, category: true } },
+      deck: { select: { name: true, category: true, language: true } },
       progress: { where: { userId }, take: 1 },
     },
   });
@@ -33,8 +33,9 @@ cardsRouter.get("/", async (req, res) => {
         id: c.id,
         deckId: c.deckId,
         deckName: c.deck.name,
-        danishText: c.danishText,
-        englishText: c.englishText,
+        language: c.deck.language,
+        targetText: c.targetText,
+        nativeText: c.nativeText,
         exampleSentence: c.exampleSentence,
         cardType: c.cardType,
         isCustom: c.ownerId !== null,
@@ -57,14 +58,14 @@ cardsRouter.get("/", async (req, res) => {
 cardsRouter.post("/", async (req, res) => {
   const userId = req.user.id;
   const deckId = String(req.body.deckId || "");
-  const danishText = String(req.body.danishText || "").trim();
-  const englishText = String(req.body.englishText || "").trim();
+  const targetText = String(req.body.targetText || "").trim();
+  const nativeText = String(req.body.nativeText || "").trim();
   const exampleSentence = req.body.exampleSentence
     ? String(req.body.exampleSentence).trim()
     : null;
 
-  if (!danishText || !englishText) {
-    return res.status(400).json({ error: "Danish and English text are required." });
+  if (!targetText || !nativeText) {
+    return res.status(400).json({ error: "Both fields are required." });
   }
 
   const deck = await prisma.deck.findUnique({ where: { id: deckId } });
@@ -77,8 +78,8 @@ cardsRouter.post("/", async (req, res) => {
   const card = await prisma.card.create({
     data: {
       deckId,
-      danishText,
-      englishText,
+      targetText,
+      nativeText,
       exampleSentence,
       cardType: deck.category,
       ownerId: userId,
@@ -94,20 +95,20 @@ cardsRouter.patch("/:id", async (req, res) => {
     return res.status(404).json({ error: "Card not found." });
   }
 
-  const danishText = String(req.body.danishText ?? card.danishText).trim();
-  const englishText = String(req.body.englishText ?? card.englishText).trim();
+  const targetText = String(req.body.targetText ?? card.targetText).trim();
+  const nativeText = String(req.body.nativeText ?? card.nativeText).trim();
   const exampleSentence =
     req.body.exampleSentence !== undefined
       ? String(req.body.exampleSentence).trim() || null
       : card.exampleSentence;
 
-  if (!danishText || !englishText) {
-    return res.status(400).json({ error: "Danish and English text are required." });
+  if (!targetText || !nativeText) {
+    return res.status(400).json({ error: "Both fields are required." });
   }
 
   const updated = await prisma.card.update({
     where: { id: card.id },
-    data: { danishText, englishText, exampleSentence },
+    data: { targetText, nativeText, exampleSentence },
   });
   res.json({ card: updated });
 });

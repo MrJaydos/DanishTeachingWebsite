@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { streamChatReply } from "../chat.js";
-import { speakDanish } from "../tts.js";
+import { speakText } from "../tts.js";
 import { playAchievement, playLevelUp } from "../sfx.js";
 import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
 import { api } from "../api.js";
+import { getStudyLanguage } from "../studyLanguage.js";
 
 const SCENARIOS = [
   { key: "small_talk", label: "Small talk", icon: "💬", opener: "Hej! Hvordan går det?" },
@@ -113,9 +114,10 @@ export default function Practice() {
     const apiHistory = history.filter((m) => m.role !== "note");
     const xpStateBefore = xpState;
 
+    const language = getStudyLanguage();
     let full = "";
     await streamChatReply(
-      { scenario, level, messages: apiHistory },
+      { scenario, level, language, messages: apiHistory },
       {
         onText: (chunk) => {
           full += chunk;
@@ -125,7 +127,7 @@ export default function Practice() {
           setMessages((prev) => [...prev, { role: "assistant", content: full }]);
           setStreaming(null);
           setSubmitting(false);
-          speakDanish(splitReply(full).danish);
+          speakText(splitReply(full).danish, language);
 
           const { xpEarned, level: newLevel, xpIntoLevel, xpForNextLevel, newAchievements } = payload;
           if (xpEarned > 0) {
@@ -231,7 +233,7 @@ export default function Practice() {
             <div key={i} className={`chat-bubble ${m.role}`}>
               <div className="row" style={{ gap: 8 }}>
                 <span className="chat-text">{danish}</span>
-                {m.role === "assistant" && <AudioButton text={danish} />}
+                {m.role === "assistant" && <AudioButton text={danish} langCode={getStudyLanguage()} />}
               </div>
               {tip && <div className="chat-tip">💡 {tip}</div>}
             </div>

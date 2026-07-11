@@ -14,9 +14,16 @@ async function main() {
   let createdCards = 0;
 
   for (const deckDef of DECKS) {
-    // System decks are identified by (name, category, ownerId=null).
+    // System decks are identified by (name, category, language, ownerId=null)
+    // — the language is part of the identity so e.g. a future Spanish "Food &
+    // Drink" deck doesn't collide with the existing Danish one.
     let deck = await prisma.deck.findFirst({
-      where: { name: deckDef.name, category: deckDef.category, ownerId: null },
+      where: {
+        name: deckDef.name,
+        category: deckDef.category,
+        language: deckDef.language,
+        ownerId: null,
+      },
     });
 
     if (!deck) {
@@ -24,6 +31,7 @@ async function main() {
         data: {
           name: deckDef.name,
           category: deckDef.category,
+          language: deckDef.language,
           description: deckDef.description || null,
           ownerId: null,
         },
@@ -35,7 +43,7 @@ async function main() {
       const exists = await prisma.card.findFirst({
         where: {
           deckId: deck.id,
-          danishText: card.danishText,
+          targetText: card.targetText,
           ownerId: null,
         },
         select: { id: true },
@@ -44,8 +52,8 @@ async function main() {
         await prisma.card.create({
           data: {
             deckId: deck.id,
-            danishText: card.danishText,
-            englishText: card.englishText,
+            targetText: card.targetText,
+            nativeText: card.nativeText,
             exampleSentence: card.exampleSentence || null,
             cardType: deckDef.category,
             ownerId: null,

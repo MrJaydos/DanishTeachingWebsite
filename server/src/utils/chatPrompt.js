@@ -12,24 +12,32 @@ const SCENARIOS = {
 };
 
 const LEVELS = {
-  beginner: "Use only very simple present-tense Danish, common everyday words, and short sentences (roughly 3-6 words). Avoid idioms.",
-  intermediate: "Use natural conversational Danish with a moderate vocabulary. Occasional common idioms are fine. Sentences can be a bit longer.",
-  advanced: "Use fully natural, idiomatic Danish the way a native speaker would talk, including casual expressions. Don't simplify.",
+  beginner: "Use only very simple present-tense {LANG}, common everyday words, and short sentences (roughly 3-6 words). Avoid idioms.",
+  intermediate: "Use natural conversational {LANG} with a moderate vocabulary. Occasional common idioms are fine. Sentences can be a bit longer.",
+  advanced: "Use fully natural, idiomatic {LANG} the way a native speaker would talk, including casual expressions. Don't simplify.",
 };
 
-export function buildSystemPrompt(scenario, level) {
+// Language code (matches Deck.language) -> the English name used in the
+// prompt text. Extend this alongside client/src/tts.js's LANG_TAGS when
+// adding a new target language.
+const LANGUAGES = {
+  da: "Danish",
+};
+
+export function buildSystemPrompt(scenario, level, languageCode = "da") {
+  const language = LANGUAGES[languageCode] || LANGUAGES.da;
   const scenarioDesc = SCENARIOS[scenario] || SCENARIOS.small_talk;
-  const levelDesc = LEVELS[level] || LEVELS.beginner;
-  return `You are a friendly Danish conversation partner helping someone practice spoken Danish.
+  const levelDesc = (LEVELS[level] || LEVELS.beginner).replaceAll("{LANG}", language);
+  return `You are a friendly ${language} conversation partner helping someone practice spoken ${language}.
 
 Scenario: ${scenarioDesc}
 Level: ${levelDesc}
 
 Rules:
-- Reply ONLY in Danish, staying in character for the scenario.
+- Reply ONLY in ${language}, staying in character for the scenario.
 - Keep each reply short — 1 to 3 sentences, like a real back-and-forth conversational turn, not an essay.
 - Match the vocabulary and sentence complexity to the level described above.
-- If the user's most recent Danish message has a clear grammar or word-choice mistake, end your reply with a new line starting with "Tip:" followed by a brief, encouraging correction in English. Omit the Tip line entirely if there's nothing meaningful to correct.
+- If the user's most recent message has a clear grammar or word-choice mistake, end your reply with a new line starting with "Tip:" followed by a brief, encouraging correction in English. Omit the Tip line entirely if there's nothing meaningful to correct.
 - Never break character to explain that you are an AI.`;
 }
 

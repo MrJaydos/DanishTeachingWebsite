@@ -4,7 +4,7 @@
 
 import { getToken, API_BASE } from "./api.js";
 
-export async function streamChatReply({ scenario, level, messages }, { onText, onDone, onError }) {
+export async function streamChatReply({ scenario, level, language, messages }, { onText, onDone, onError }) {
   let res;
   try {
     res = await fetch(`${API_BASE}/api/chat/reply`, {
@@ -13,7 +13,7 @@ export async function streamChatReply({ scenario, level, messages }, { onText, o
         "Content-Type": "application/json",
         Authorization: `Bearer ${getToken()}`,
       },
-      body: JSON.stringify({ scenario, level, messages }),
+      body: JSON.stringify({ scenario, level, language, messages }),
     });
   } catch (e) {
     onError(e.message || "Network error.");

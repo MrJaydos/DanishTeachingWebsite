@@ -67,6 +67,7 @@ model Deck {
   name        String
   category    String // "vocab" | "grammar" | "listening"
   description String?
+  language    String   @default("da") // ISO-ish code for the language being taught, e.g. "da"
   ownerId     String?  @map("owner_id") // null = built-in/system deck, otherwise a user's custom deck
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -79,8 +80,8 @@ model Deck {
 model Card {
   id              String   @id @default(uuid())
   deckId          String   @map("deck_id")
-  danishText      String   @map("danish_text")
-  englishText     String   @map("english_text")
+  targetText      String   @map("target_text") // the word/phrase in the language being learned (the deck's language)
+  nativeText      String   @map("native_text") // the English meaning/translation
   exampleSentence String?  @map("example_sentence")
   cardType        String   @map("card_type") // "vocab" | "grammar" | "listening"
   ownerId         String?  @map("owner_id") // null = built-in/system card, otherwise a user's custom card

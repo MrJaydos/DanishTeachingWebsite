@@ -19,6 +19,20 @@ describe("buildSystemPrompt", () => {
     assert.match(prompt, /Reply ONLY in Danish/);
     assert.match(prompt, /"Tip:"/);
   });
+
+  test("defaults to Danish when no language code is given", () => {
+    assert.equal(
+      buildSystemPrompt("small_talk", "beginner"),
+      buildSystemPrompt("small_talk", "beginner", "da")
+    );
+  });
+
+  test("falls back to Danish for an unknown language code", () => {
+    assert.equal(
+      buildSystemPrompt("small_talk", "beginner", "xx"),
+      buildSystemPrompt("small_talk", "beginner", "da")
+    );
+  });
 });
 
 describe("sanitizeMessages", () => {
