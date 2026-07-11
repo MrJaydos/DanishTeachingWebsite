@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { streamChatReply } from "../chat.js";
 import { speakDanish } from "../tts.js";
+import { playAchievement, playLevelUp } from "../sfx.js";
+import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
+import { api } from "../api.js";
 
 const SCENARIOS = [
   { key: "small_talk", label: "Small talk", icon: "💬", opener: "Hej! Hvordan går det?" },
@@ -35,6 +38,23 @@ export default function Practice() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const bottomRef = useRef(null);
+
+  const [xpState, setXpState] = useState(null); // { xpTotal, level, xpIntoLevel, xpForNextLevel }
+  const [xpFloat, setXpFloat] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
+
+  useEffect(() => {
+    api.dashboard().then((d) =>
+      setXpState({ xpTotal: d.xpTotal, level: d.level, xpIntoLevel: d.xpIntoLevel, xpForNextLevel: d.xpForNextLevel })
+    );
+  }, []);
+
+  function addToast(toast, ttl = 4000) {
+    const id = ++toastIdRef.current;
+    setToasts((t) => [...t, { id, ...toast }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ttl);
+  }
 
   function opener() {
     return SCENARIOS.find((s) => s.key === scenario)?.opener || SCENARIOS[0].opener;
@@ -91,6 +111,7 @@ export default function Practice() {
     // "note" entries (e.g. "Switched to Advanced level") are UI-only markers
     // and aren't part of the actual conversation sent to the model.
     const apiHistory = history.filter((m) => m.role !== "note");
+    const xpStateBefore = xpState;
 
     let full = "";
     await streamChatReply(
@@ -100,11 +121,31 @@ export default function Practice() {
           full += chunk;
           setStreaming(full);
         },
-        onDone: () => {
+        onDone: (payload) => {
           setMessages((prev) => [...prev, { role: "assistant", content: full }]);
           setStreaming(null);
           setSubmitting(false);
           speakDanish(splitReply(full).danish);
+
+          const { xpEarned, level: newLevel, xpIntoLevel, xpForNextLevel, newAchievements } = payload;
+          if (xpEarned > 0) {
+            setXpFloat(xpEarned);
+            setTimeout(() => setXpFloat(null), 1200);
+          }
+          if (xpStateBefore && newLevel > xpStateBefore.level) {
+            addToast({ icon: "⭐", title: `Level ${newLevel}!`, subtitle: "You leveled up." });
+            fireConfetti({ count: 70 });
+            playLevelUp();
+          }
+          setXpState({ xpTotal: (xpStateBefore?.xpTotal || 0) + xpEarned, level: newLevel, xpIntoLevel, xpForNextLevel });
+
+          if (newAchievements?.length) {
+            newAchievements.forEach((a) =>
+              addToast({ icon: a.icon, title: `Achievement: ${a.label}`, subtitle: a.description })
+            );
+            fireConfetti({ count: 60 });
+            playAchievement();
+          }
         },
         onError: (msg) => {
           setError(msg);
@@ -122,8 +163,23 @@ export default function Practice() {
     }
   }
 
+  const celebrationStack = toasts.length > 0 && (
+    <div className="celebration-stack">
+      {toasts.map((t) => (
+        <div className="celebration-toast" key={t.id}>
+          <span className="celebration-icon">{t.icon}</span>
+          <div>
+            <div className="celebration-title">{t.title}</div>
+            <div className="celebration-subtitle">{t.subtitle}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="practice-wrap">
+      {celebrationStack}
       <div className="spread">
         <div>
           <p className="section-title">Conversation practice</p>
@@ -191,6 +247,8 @@ export default function Practice() {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {xpFloat && <div className="xp-float">+{xpFloat} XP</div>}
 
       <div className="chat-input-row">
         <input

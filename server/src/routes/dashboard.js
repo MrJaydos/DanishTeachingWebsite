@@ -31,8 +31,14 @@ dashboardRouter.get("/", async (req, res) => {
     prisma.user.findUnique({ where: { id: userId }, select: { xpTotal: true } }),
   ]);
 
+  // Study reviews and Practice chat messages both count as "activity" for the
+  // streak/heatmap/today-count — combine them into one number here so the
+  // frontend doesn't need to know about the two underlying counters.
   const activityByDate = new Map(
-    activity.map((a) => [toUtcDate(new Date(a.date)).toISOString().slice(0, 10), a.reviews])
+    activity.map((a) => [
+      toUtcDate(new Date(a.date)).toISOString().slice(0, 10),
+      a.reviews + a.chatMessages,
+    ])
   );
 
   const newAvailable = totalCards - inReview;

@@ -43,7 +43,7 @@ export async function streamChatReply({ scenario, level, messages }, { onText, o
       if (!line.startsWith("data:")) continue;
       const payload = JSON.parse(line.slice(5).trim());
       if (payload.error) onError(payload.error);
-      else if (payload.done) onDone();
+      else if (payload.done) onDone(payload); // carries xpEarned/level/newAchievements
       else if (payload.text) onText(payload.text);
     }
   }

@@ -9,7 +9,7 @@ import { prisma } from "../prisma.js";
 import { computeStreak } from "./streak.js";
 
 export const ACHIEVEMENTS = [
-  { key: "first_review", icon: "🎉", label: "First Steps", description: "Complete your first review.", metric: "lifetimeReviews", target: 1 },
+  { key: "first_review", icon: "🎉", label: "First Steps", description: "Complete your first review or practice message.", metric: "lifetimeReviews", target: 1 },
   { key: "streak_3", icon: "🔥", label: "Getting Started", description: "Reach a 3-day streak.", metric: "streak", target: 3 },
   { key: "streak_7", icon: "🔥", label: "Week Warrior", description: "Reach a 7-day streak.", metric: "streak", target: 7 },
   { key: "streak_30", icon: "🔥", label: "Unstoppable", description: "Reach a 30-day streak.", metric: "streak", target: 30 },
@@ -17,9 +17,9 @@ export const ACHIEVEMENTS = [
   { key: "learned_25", icon: "📚", label: "Vocabulary Builder", description: "Learn 25 cards.", metric: "learned", target: 25 },
   { key: "learned_100", icon: "📚", label: "Word Collector", description: "Learn 100 cards.", metric: "learned", target: 100 },
   { key: "learned_250", icon: "📚", label: "Danish Encyclopedia", description: "Learn 250 cards.", metric: "learned", target: 250 },
-  { key: "reviews_100", icon: "💪", label: "Century of Reviews", description: "Complete 100 reviews.", metric: "lifetimeReviews", target: 100 },
-  { key: "reviews_500", icon: "💪", label: "Dedicated Learner", description: "Complete 500 reviews.", metric: "lifetimeReviews", target: 500 },
-  { key: "reviews_1000", icon: "💪", label: "Review Machine", description: "Complete 1000 reviews.", metric: "lifetimeReviews", target: 1000 },
+  { key: "reviews_100", icon: "💪", label: "Century of Reviews", description: "Complete 100 reviews or practice messages.", metric: "lifetimeReviews", target: 100 },
+  { key: "reviews_500", icon: "💪", label: "Dedicated Learner", description: "Complete 500 reviews or practice messages.", metric: "lifetimeReviews", target: 500 },
+  { key: "reviews_1000", icon: "💪", label: "Review Machine", description: "Complete 1000 reviews or practice messages.", metric: "lifetimeReviews", target: 1000 },
   { key: "deck_complete", icon: "🏆", label: "Deck Master", description: "Fully learn every card in a deck.", metric: "deckCompleted", target: true },
   { key: "polyglot", icon: "🌍", label: "Well-Rounded", description: "Learn at least one word, one grammar point, and one listening phrase.", metric: "polyglot", target: true },
 ];
@@ -40,7 +40,7 @@ export async function computeUserStats(userId) {
   const [activity, learned, reviewSum, deckRows, learnedCards] = await Promise.all([
     prisma.dailyActivity.findMany({ where: { userId }, select: { date: true } }),
     prisma.userCardProgress.count({ where: { userId, repetitions: { gte: 1 } } }),
-    prisma.dailyActivity.aggregate({ where: { userId }, _sum: { reviews: true } }),
+    prisma.dailyActivity.aggregate({ where: { userId }, _sum: { reviews: true, chatMessages: true } }),
     prisma.$queryRaw`
       SELECT COUNT(c.id)::int AS total, COUNT(CASE WHEN p.repetitions >= 1 THEN 1 END)::int AS learned
       FROM decks d
@@ -61,7 +61,7 @@ export async function computeUserStats(userId) {
   return {
     streak: computeStreak(activity.map((a) => a.date)),
     learned,
-    lifetimeReviews: reviewSum._sum.reviews || 0,
+    lifetimeReviews: (reviewSum._sum.reviews || 0) + (reviewSum._sum.chatMessages || 0),
     deckCompleted: deckRows.some((d) => d.total > 0 && d.total === d.learned),
     polyglot: learnedTypes.has("vocab") && learnedTypes.has("grammar") && learnedTypes.has("listening"),
   };

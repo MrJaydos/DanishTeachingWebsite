@@ -114,7 +114,7 @@ export default function Dashboard() {
         <div className="spread">
           <p className="section-title">Activity — last {stats.recent.length} days</p>
           <span className="muted" style={{ fontSize: "0.85rem" }}>
-            {totalInPeriod} review{totalInPeriod === 1 ? "" : "s"}
+            {totalInPeriod} practice rep{totalInPeriod === 1 ? "" : "s"}
           </span>
         </div>
         <div className="heatmap-scroll">
@@ -123,7 +123,7 @@ export default function Dashboard() {
               <div
                 key={c ? c.date : `pad-${i}`}
                 className={`heatmap-cell${c ? ` level-${heatLevel(c.reviews)}` : " empty"}`}
-                title={c ? `${c.reviews} review${c.reviews === 1 ? "" : "s"} on ${c.date}` : ""}
+                title={c ? `${c.reviews} practice rep${c.reviews === 1 ? "" : "s"} on ${c.date}` : ""}
               />
             ))}
           </div>
@@ -136,7 +136,7 @@ export default function Dashboard() {
           <span className="muted">More</span>
         </div>
         <p className="muted" style={{ marginTop: 12, fontSize: "0.85rem" }}>
-          {stats.reviewsToday} review{stats.reviewsToday === 1 ? "" : "s"} today ·{" "}
+          {stats.reviewsToday} practice rep{stats.reviewsToday === 1 ? "" : "s"} today ·{" "}
           {stats.inReview} cards in rotation
         </p>
       </div>

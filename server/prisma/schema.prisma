@@ -113,12 +113,15 @@ model UserCardProgress {
   @@map("user_card_progress")
 }
 
-// One row per user per day they studied — used to compute streaks.
+// One row per user per day they did something (studied and/or practiced
+// conversation) — used to compute streaks. Either count being nonzero marks
+// the day as active; the dashboard exposes their sum as one "activity" number.
 model DailyActivity {
-  id      String   @id @default(uuid())
-  userId  String   @map("user_id")
-  date    DateTime @db.Date
-  reviews Int      @default(0)
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  date         DateTime @db.Date
+  reviews      Int      @default(0)
+  chatMessages Int      @default(0) @map("chat_messages")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
