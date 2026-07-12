@@ -16,7 +16,7 @@ export const ACHIEVEMENTS = [
   { key: "streak_100", icon: "🔥", label: "Centurion Streak", description: "Reach a 100-day streak.", metric: "streak", target: 100 },
   { key: "learned_25", icon: "📚", label: "Vocabulary Builder", description: "Learn 25 cards.", metric: "learned", target: 25 },
   { key: "learned_100", icon: "📚", label: "Word Collector", description: "Learn 100 cards.", metric: "learned", target: 100 },
-  { key: "learned_250", icon: "📚", label: "Danish Encyclopedia", description: "Learn 250 cards.", metric: "learned", target: 250 },
+  { key: "learned_250", icon: "📚", label: "Walking Dictionary", description: "Learn 250 cards.", metric: "learned", target: 250 },
   { key: "reviews_100", icon: "💪", label: "Century of Reviews", description: "Complete 100 reviews or practice messages.", metric: "lifetimeReviews", target: 100 },
   { key: "reviews_500", icon: "💪", label: "Dedicated Learner", description: "Complete 500 reviews or practice messages.", metric: "lifetimeReviews", target: 500 },
   { key: "reviews_1000", icon: "💪", label: "Review Machine", description: "Complete 1000 reviews or practice messages.", metric: "lifetimeReviews", target: 1000 },

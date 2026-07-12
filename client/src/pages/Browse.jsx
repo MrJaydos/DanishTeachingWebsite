@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import AudioButton from "../components/AudioButton.jsx";
 import { useSettings } from "../context/SettingsContext.jsx";
+import { labelFor } from "../studyLanguage.js";
 
 export default function Browse() {
   const { studyLanguage } = useSettings();
@@ -427,7 +428,7 @@ function CardModal({ deck, card, onClose, onSaved }) {
       {error && <div className="alert error">{error}</div>}
       <form onSubmit={submit}>
         <div className="field">
-          <label>Danish</label>
+          <label>{labelFor(deck.language)}</label>
           <input className="input" value={targetText} onChange={(e) => setTarget(e.target.value)} required />
         </div>
         <div className="field">

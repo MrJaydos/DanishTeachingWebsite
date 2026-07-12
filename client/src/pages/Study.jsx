@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { speakText } from "../tts.js";
 import { useSettings } from "../context/SettingsContext.jsx";
+import { flagFor, labelFor, NATIVE_FLAG } from "../studyLanguage.js";
 import { playCorrect, playAgain, playAchievement, playLevelUp } from "../sfx.js";
 import { fireConfetti } from "../confetti.js";
 import AudioButton from "../components/AudioButton.jsx";
@@ -61,7 +62,7 @@ export default function Study() {
   const promptText = isListening
     ? "Listen, then recall what it means."
     : reversed
-    ? "How do you say this in Danish?"
+    ? `How do you say this in ${labelFor(current?.language)}?`
     : "What does this mean in English?";
 
   function addToast(toast, ttl = 3200) {
@@ -333,7 +334,9 @@ export default function Study() {
               onClick={toggleDirection}
               title="Swap which language you recall"
             >
-              {reversed ? "🇬🇧→🇩🇰" : "🇩🇰→🇬🇧"}
+              {reversed
+                ? `${NATIVE_FLAG}→${flagFor(current.language)}`
+                : `${flagFor(current.language)}→${NATIVE_FLAG}`}
             </button>
           )}
           <button
@@ -421,7 +424,7 @@ export default function Study() {
                 isListening
                   ? "Type what it means…"
                   : reversed
-                  ? "Skriv det danske ord…"
+                  ? `Type the ${labelFor(current?.language)} word…`
                   : "Type the English meaning…"
               }
               value={typed}
